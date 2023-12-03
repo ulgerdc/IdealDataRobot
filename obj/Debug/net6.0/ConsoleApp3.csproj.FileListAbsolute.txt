@@ -1,5 +1,0 @@
-C:\iko\robot\obj\Debug\net6.0\ConsoleApp3.csproj.AssemblyReference.cache
-C:\iko\robot\obj\Debug\net6.0\ConsoleApp3.GeneratedMSBuildEditorConfig.editorconfig
-C:\iko\robot\obj\Debug\net6.0\ConsoleApp3.AssemblyInfoInputs.cache
-C:\iko\robot\obj\Debug\net6.0\ConsoleApp3.AssemblyInfo.cs
-C:\iko\robot\obj\Debug\net6.0\ConsoleApp3.csproj.CoreCompileInputs.cache
