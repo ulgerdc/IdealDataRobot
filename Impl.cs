@@ -10,8 +10,14 @@ namespace AlimSatimRobotu
 {
     internal class Impl
     {
-        public static void Start(string hisseAdi, double sonfiyat)
+        public static void Start(dynamic Sistem, string hisseAdi, double sonfiyat)
         {
+            Sistem.AlgoIslem = "OK";
+            if(!Sistem.BaglantiVar)
+            {
+                return;
+            }
+
             double marj = 0;
             int lot;
 
@@ -33,7 +39,7 @@ namespace AlimSatimRobotu
             var satisKontrol = DatabaseManager.HisseSatimKontrol(hisseAdi, sonfiyat, marj);
             if (satisKontrol.Item1 > 0)
             {
-                IdealManager.Sat(hisse, satisKontrol.Item1, sonfiyat);
+                IdealManager.Sat(Sistem, hisse, satisKontrol.Item1, sonfiyat);
                 foreach (var item in satisKontrol.Item2)
                 {
                     item.SatisFiyati = sonfiyat;
@@ -50,7 +56,7 @@ namespace AlimSatimRobotu
             var hisseAlimKontrol = DatabaseManager.HisseAlimKontrol(hisseAdi, sonfiyat, marj);
             if (hisseAlimKontrol)
             {
-                IdealManager.Al(hisse, lot, sonfiyat);
+                IdealManager.Al(Sistem, hisse, lot, sonfiyat);
                 var hisseAl = new HisseHareket();
                 hisseAl.AlisFiyati = sonfiyat;
                 hisseAl.HisseAdi = hisseAdi;

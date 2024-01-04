@@ -1,5 +1,6 @@
 ﻿using AlimSatimRobotu.Entity;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -13,34 +14,36 @@ namespace AlimSatimRobotu
 {
     internal class DatabaseManager
     {
+        static string connectionString = "Data Source=.;Initial Catalog=robot;User ID=sa;Password=1;Connection Timeout=30;Min Pool Size=5;Max Pool Size=15;Pooling=true;TrustServerCertificate=True;";
         private static SqlConnection OpenConnection()
         {
-            var conn = new SqlConnection(@"Data Source=.;Initial Catalog=robot;User ID=sa;Password=1;Connection Timeout=30;Min Pool Size=5;Max Pool Size=15;Pooling=true;TrustServerCertificate=True;");
+            var conn = new SqlConnection(connectionString);
             conn.Open();
             return conn;    
         }
 
-        public static Hisse HisseGetir(string hisseAdi) {
+        public static Hisse HisseGetir(string hisseAdi) 
+        {
 
-
-            var conn = OpenConnection();
-
-            SqlCommand cmd = conn.CreateCommand();
-            cmd.CommandType = CommandType.Text;
-            cmd.Connection = conn;
-            cmd.CommandText = $"select * from Hisse where HisseAdi='{hisseAdi}'";
-            cmd.ExecuteNonQuery();
-            DataTable dt = new DataTable();
-            SqlDataAdapter da = new SqlDataAdapter(cmd);
-            da.Fill(dt);
             Hisse hisse = null;
-            if (dt.Rows.Count > 0)
+            using (SqlConnection connection = new SqlConnection(connectionString))
             {
-                var row = dt.Rows[0];
-                hisse = MapDataRowToObject<Hisse>(row);
+                connection.Open();
 
+                SqlCommand cmd = connection.CreateCommand();
+                cmd.CommandType = CommandType.Text;
+
+                cmd.CommandText = string.Format("select * from Hisse where HisseAdi='{0}'", hisseAdi);
+                cmd.Parameters.AddWithValue("@HisseAdi", hisseAdi);
+
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        hisse = MapFromDataReader<Hisse>(reader);
+                    }
+                }
             }
-            cmd.Connection.Close();
 
             return hisse;
 
@@ -48,26 +51,26 @@ namespace AlimSatimRobotu
 
         public static HisseHareket HisseHareketGetir(string hisseAdi, double fiyat)
         {
-            var conn = OpenConnection();
-
-            SqlCommand cmd = conn.CreateCommand();
-            cmd.CommandType = CommandType.StoredProcedure;
-            cmd.Connection = conn;
-            cmd.CommandText = $"sel_HisseHareket";
-            cmd.Parameters.AddWithValue("@HisseAdi", hisseAdi);
-            cmd.Parameters.AddWithValue("@Fiyat", fiyat);
-
-            cmd.ExecuteNonQuery();
-            DataTable dt = new DataTable();
-            SqlDataAdapter da = new SqlDataAdapter(cmd);
-            da.Fill(dt);
             HisseHareket hisse = null;
-            if (dt.Rows.Count > 0)
+            using (SqlConnection connection = new SqlConnection(connectionString))
             {
-                var row = dt.Rows[0];
-                hisse = MapDataRowToObject<HisseHareket>(row);
+                connection.Open();
+
+                SqlCommand cmd = connection.CreateCommand();
+                cmd.CommandType = CommandType.StoredProcedure;
+    
+                cmd.CommandText = $"sel_HisseHareket";
+                cmd.Parameters.AddWithValue("@HisseAdi", hisseAdi);
+          
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        hisse = MapFromDataReader<HisseHareket>(reader);
+
+                    }
+                }
             }
-            cmd.Connection.Close();
 
             return hisse;
 
@@ -109,7 +112,7 @@ namespace AlimSatimRobotu
             SqlCommand cmd = conn.CreateCommand();
             cmd.CommandType = CommandType.StoredProcedure;
             cmd.Connection = conn;
-            cmd.CommandText = $"[dbo].[sel_hisseSatimKontrol]";
+            cmd.CommandText = "[dbo].[sel_hisseSatimKontrol]";
             cmd.Parameters.AddWithValue("@HisseAdi", hisseAdi);
             cmd.Parameters.AddWithValue("@SatisFiyati", satisFiyati);
             cmd.Parameters.AddWithValue("@Marj", marj);
@@ -232,6 +235,26 @@ namespace AlimSatimRobotu
             return obj;
         }
 
-    
+        static T MapFromDataReader<T>(SqlDataReader reader) where T : new()
+        {
+            T instance = new T();
+
+            for (int i = 0; i < reader.FieldCount; i++)
+            {
+                string fieldName = reader.GetName(i);
+                object value = reader.GetValue(i);
+
+                PropertyInfo property = typeof(T).GetProperty(fieldName, BindingFlags.Public | BindingFlags.Instance);
+
+                if (property != null && value != DBNull.Value)
+                {
+                    property.SetValue(instance, Convert.ChangeType(value, property.PropertyType));
+                }
+            }
+
+            return instance;
+        }
+
+
     }
 }
