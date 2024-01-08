@@ -1,0 +1,10 @@
+C:\iko\Denali.Test\bin\Debug\Denali.Test.exe.config
+C:\iko\Denali.Test\bin\Debug\Denali.Test.exe
+C:\iko\Denali.Test\bin\Debug\Denali.Test.pdb
+C:\iko\Denali.Test\bin\Debug\Denali.dll
+C:\iko\Denali.Test\bin\Debug\Denali.pdb
+C:\iko\Denali.Test\obj\Debug\Denali.Test.csproj.AssemblyReference.cache
+C:\iko\Denali.Test\obj\Debug\Denali.Test.csproj.CoreCompileInputs.cache
+C:\iko\Denali.Test\obj\Debug\Denali.Test.csproj.CopyComplete
+C:\iko\Denali.Test\obj\Debug\Denali.Test.exe
+C:\iko\Denali.Test\obj\Debug\Denali.Test.pdb
