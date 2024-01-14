@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Denali", "Denali\Denali.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Denali.Test", "Denali.Test\Denali.Test.csproj", "{225F1292-2C1B-4EEB-B182-FB637A3A891F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Denali.IdealLibConverter", "Denali.IdealLibConverter\Denali.IdealLibConverter.csproj", "{4AC42854-9CE5-44AA-878F-59738193CFE8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{225F1292-2C1B-4EEB-B182-FB637A3A891F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{225F1292-2C1B-4EEB-B182-FB637A3A891F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{225F1292-2C1B-4EEB-B182-FB637A3A891F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4AC42854-9CE5-44AA-878F-59738193CFE8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4AC42854-9CE5-44AA-878F-59738193CFE8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4AC42854-9CE5-44AA-878F-59738193CFE8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4AC42854-9CE5-44AA-878F-59738193CFE8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
