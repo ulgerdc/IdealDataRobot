@@ -2,14 +2,14 @@
 public class RiskYoneticisi
 {
     //1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 23
-    public static int AlisKontrolleri(Hisse hisse)
+    public static int RiskHesapla(Hisse hisse)
     {
         var hissePozisyonlari = DatabaseManager.AcikHissePozisyonlariGetir(hisse.HisseAdi);
         var rtn = 1;
         if (hissePozisyonlari == null)
             return rtn;
 
-        var percentage = IdealManager.CalculatePercentage(hissePozisyonlari.ToplamAlisFiyati, hisse.Butce);
+        var percentage = IdealManager.CalculatePercentage(hissePozisyonlari.AcikPozisyonAlimTutari, hisse.Butce);
 
         if (percentage < 30)
         {
@@ -34,6 +34,15 @@ public class RiskYoneticisi
 
         return rtn;
 
+    }
+
+    public static int RiskHesapla(dynamic Sistem, Hisse hisse, double alistutari, double marj)
+    {
+        double yuksekGun = IdealManager.YuksekGunGetir(Sistem, hisse.HisseAdi);
+        if(alistutari + marj>=yuksekGun)
+            return 0;
+
+        return RiskHesapla(hisse);
     }
 
 

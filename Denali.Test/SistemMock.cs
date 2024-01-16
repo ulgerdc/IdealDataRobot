@@ -15,21 +15,21 @@ namespace Denali.Test
         public string Saat { get { return "10:05:00"; } }
 
         public string EmirSembol { get; set; }
-        public string EmirIslem { get; internal set; }
-        public int EmirMiktari { get; internal set; }
-        public string EmirFiyati { get; internal set; }
-        public string EmirSuresi { get; internal set; }
-        public string EmirTipi { get; internal set; }
-        public string EmirSatisTipi { get; internal set; }
+        public string EmirIslem { get; set; }
+        public int EmirMiktari { get;  set; }
+        public double EmirFiyati { get;  set; }
+        public string EmirSuresi { get;  set; }
+        public string EmirTipi { get;  set; }
+        public string EmirSatisTipi { get;  set; }
 
         public double SatisFiyat(string s)
         {
-            return 92.65D;
+            return 42.40D;
         }
 
         public double AlisFiyat(string s)
         {
-            return 92.45D;
+            return 50.40D;
         }
 
         public void Debug (string s)
@@ -61,5 +61,16 @@ namespace Denali.Test
         {
             return 1;
         }
+        
+        public double YuksekGun(string v)
+        {
+            return 1;
+        }
+
+        public double DusukGun(string v)
+        {
+            return 1;
+        }
+
     }
 }

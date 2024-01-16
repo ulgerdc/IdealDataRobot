@@ -1,4 +1,5 @@
 ﻿
+
 public class DatabaseManager
 {
     static string connectionString = "Data Source=.;Initial Catalog=robot;User ID=sa;Password=1;Connection Timeout=30;Min Pool Size=5;Max Pool Size=15;Pooling=true;TrustServerCertificate=True;";
@@ -165,6 +166,62 @@ public class DatabaseManager
         cmd.Parameters.AddWithValue("@AlisFiyati", hisseHareket.AlisFiyati);
         cmd.Parameters.AddWithValue("@SatisFiyati", hisseHareket.SatisFiyati);
         cmd.Parameters.AddWithValue("@RobotAdi", hisseHareket.RobotAdi);
+        cmd.ExecuteNonQuery();
+        cmd.Connection.Close();
+
+    }
+
+    public static System.Collections.Generic.List<HisseEmir> HisseEmirGetir(HisseEmirDurum durum)
+    {
+
+        var hisseEmirList = new System.Collections.Generic.List<HisseEmir>();
+
+        using (System.Data.SqlClient.SqlConnection connection = new System.Data.SqlClient.SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.Text;
+
+            cmd.CommandText = string.Format("select * from HisseEmir where durum='{0}'", durum.ToString());
+            //cmd.Parameters.AddWithValue("@durum", durum);
+
+            using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    HisseEmir hisseEmir = MapFromDataReader<HisseEmir>(reader);
+                    hisseEmirList.Add(hisseEmir);
+                }
+            }
+        }
+
+        return hisseEmirList;
+
+    }
+
+    public static void HisseEmirGuncelle(HisseEmir hisseEmir)
+    {
+        var conn = OpenConnection();
+
+        System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
+        cmd.CommandType = System.Data.CommandType.Text;
+        cmd.Connection = conn;
+        if (hisseEmir.SatisTarihi == System.DateTime.MinValue)
+        {
+            cmd.CommandText = "Update HisseEmir set Durum=@Durum, AlisTarihi=@AlisTarihi Where Id = @Id";
+            cmd.Parameters.AddWithValue("@AlisTarihi", hisseEmir.AlisTarihi);
+        }
+        else
+        {
+            cmd.CommandText = "Update HisseEmir set Durum=@Durum, Satistarihi=@SatisTarihi, Kar =@Kar  Where Id = @Id";
+            cmd.Parameters.AddWithValue("@Satistarihi", hisseEmir.SatisTarihi);
+            cmd.Parameters.AddWithValue("@Kar", hisseEmir.Kar);
+        }
+
+        cmd.Parameters.AddWithValue("@Id", hisseEmir.Id);
+        cmd.Parameters.AddWithValue("@Durum", hisseEmir.Durum);
+
         cmd.ExecuteNonQuery();
         cmd.Connection.Close();
 

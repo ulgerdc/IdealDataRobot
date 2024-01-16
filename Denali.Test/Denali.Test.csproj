@@ -51,9 +51,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Denali\Denali.csproj">
-      <Project>{a0fd16c6-6a99-41bd-a278-45f01448d09e}</Project>
-      <Name>Denali</Name>
+    <ProjectReference Include="..\Denali.IdealLibConverter\Denali.IdealLibConverter.csproj">
+      <Project>{4ac42854-9ce5-44aa-878f-59738193cfe8}</Project>
+      <Name>Denali.IdealLibConverter</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

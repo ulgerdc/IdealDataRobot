@@ -26,7 +26,6 @@ public class IdealManager
         //Emirler[] BekleyenList = BistHesap.BekleyenEmirler;
         //Emirler[] GerceklesenList = BistHesap.GerceklesenEmirler;
 
-        Sistem.Debug("Debug");
 
     }
 
@@ -52,7 +51,6 @@ public class IdealManager
 
     public static double YuksekGunGetir(dynamic Sistem, string hisse)
     {
-
         return Sistem.YuksekGun(hisseOrtam + hisse);
     }
 
@@ -62,10 +60,10 @@ public class IdealManager
         return Sistem.DusukGun(hisseOrtam + hisse);
     }
 
-    public static void Al(dynamic Sistem, Hisse hisse, int lot, double fiyat)
+    public static void Al(dynamic Sistem, string hisseAdi, int lot, double fiyat)
     {
 
-        Sistem.EmirSembol = "IMKBH'" + hisse.HisseAdi;
+        Sistem.EmirSembol = "IMKBH'" + hisseAdi;
         Sistem.EmirIslem = "ALIS";
         Sistem.EmirSuresi = "GUN"; // SEANS, GUN
         Sistem.EmirTipi = "Limit"; // NORMAL, KIE, KPY, AFE/KAFE
@@ -81,9 +79,9 @@ public class IdealManager
 
     }
 
-    public static void Sat(dynamic Sistem, Hisse hisse, int lot, double fiyat)
+    public static void Sat(dynamic Sistem, string hisseAdi, int lot, double fiyat)
     {
-        Sistem.EmirSembol = "IMKBH'" + hisse.HisseAdi;
+        Sistem.EmirSembol = "IMKBH'" + hisseAdi;
         Sistem.EmirIslem = "SATIS";
         Sistem.EmirSuresi = "GUN";
         Sistem.EmirTipi = "Limit";

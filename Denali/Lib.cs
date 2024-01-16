@@ -1,6 +1,6 @@
 ﻿
-    public class Lib
-    {
+public class Lib
+{
         public void Baslat(dynamic Sistem, string hisseAdi)
         {
             Sistem.Debug("Basladik" + Sistem.Name);
@@ -48,7 +48,7 @@
 
             if (hisse.MarjTipi == 0)//kademe
             {
-                var kademeFiyati = (alisFiyati - satisFiyati);
+                var kademeFiyati = System.Math.Round((alisFiyati - satisFiyati), 2);
                 marj = hisse.Marj * kademeFiyati;
             }
             else if (hisse.MarjTipi == 1)//Binde
@@ -57,23 +57,12 @@
 
             }
 
-
-
-            var risk = RiskYoneticisi.AlisKontrolleri(hisse);
-
-            marj = marj * risk;
-            marj = System.Math.Round(marj, 2);
-
-            lot = IdealManager.DivideAndRoundToInt(hisse.AlimTutari, alisFiyati);
-
-            //lot = 1;
-
             if (IdealManager.SatisSaatiKontrolEt(Sistem) == false)
             {
                 var satisKontrol = DatabaseManager.HisseSatimKontrol(hisseAdi, satisFiyati, marj);
                 if (satisKontrol.Item1 > 0)
                 {
-                    IdealManager.Sat(Sistem, hisse, satisKontrol.Item1, satisFiyati);
+                    IdealManager.Sat(Sistem, hisse.HisseAdi, satisKontrol.Item1, satisFiyati);
                     foreach (var item in satisKontrol.Item2)
                     {
                         item.SatisFiyati = satisFiyati;
@@ -91,22 +80,36 @@
             if (IdealManager.AlisSaatiKontrolEt(Sistem) == false)
             {
 
-                var hisseAlimKontrol = DatabaseManager.HisseAlimKontrol(hisseAdi, alisFiyati, marj);
-                if (hisseAlimKontrol)
+                var risk = RiskYoneticisi.RiskHesapla(Sistem, hisse, alisFiyati, marj);
+                if (risk > 0)
                 {
-                    IdealManager.Al(Sistem, hisse, lot, alisFiyati);
-                    var hisseAl = new HisseHareket();
-                    hisseAl.AlisFiyati = alisFiyati;
-                    hisseAl.HisseAdi = hisseAdi;
-                    hisseAl.Lot = lot;
-                    hisseAl.RobotAdi = Sistem.Name;
-                    DatabaseManager.HisseHareketEkleGuncelle(hisseAl);
+                    marj = System.Math.Round(marj * risk, 2);
+
+                    lot = IdealManager.DivideAndRoundToInt(hisse.AlimTutari, alisFiyati);
+
+                    var hisseAlimKontrol = DatabaseManager.HisseAlimKontrol(hisseAdi, alisFiyati, marj);
+                    if (hisseAlimKontrol)
+                    {
+                        IdealManager.Al(Sistem, hisse.HisseAdi, lot, alisFiyati);
+                        var hisseAl = new HisseHareket();
+                        hisseAl.AlisFiyati = alisFiyati;
+                        hisseAl.HisseAdi = hisseAdi;
+                        hisseAl.Lot = lot;
+                        hisseAl.RobotAdi = Sistem.Name;
+                        DatabaseManager.HisseHareketEkleGuncelle(hisseAl);
+                    }
+                    else
+                    {
+                        Sistem.Debug(string.Format("{0} {1} alis icin uygun degil", hisseAdi, alisFiyati));
+                    }
                 }
-                else
-                {
-                    Sistem.Debug(string.Format("{0} {1} alis icin uygun degil", hisseAdi, alisFiyati));
-                }
+               
             }
         }
+
+    public void ManuelAnalizBaslat(dynamic Sistem)
+    {
+        ManuelAnalizStrateji.Baslat(Sistem);
     }
+}
 

@@ -8,3 +8,14 @@ C:\iko\Denali.Test\obj\Debug\Denali.Test.csproj.CoreCompileInputs.cache
 C:\iko\Denali.Test\obj\Debug\Denali.Test.csproj.CopyComplete
 C:\iko\Denali.Test\obj\Debug\Denali.Test.exe
 C:\iko\Denali.Test\obj\Debug\Denali.Test.pdb
+C:\iko\robot\Denali.Test\obj\Debug\Denali.Test.csproj.AssemblyReference.cache
+C:\iko\robot\Denali.Test\obj\Debug\Denali.Test.csproj.CoreCompileInputs.cache
+C:\iko\robot\Denali.Test\obj\Debug\Denali.Test.exe
+C:\iko\robot\Denali.Test\obj\Debug\Denali.Test.pdb
+C:\iko\robot\Denali.Test\bin\Debug\Denali.Test.exe.config
+C:\iko\robot\Denali.Test\bin\Debug\Denali.Test.exe
+C:\iko\robot\Denali.Test\bin\Debug\Denali.Test.pdb
+C:\iko\robot\Denali.Test\bin\Debug\Denali.IdealLibConverter.exe
+C:\iko\robot\Denali.Test\bin\Debug\Denali.IdealLibConverter.pdb
+C:\iko\robot\Denali.Test\bin\Debug\Denali.IdealLibConverter.exe.config
+C:\iko\robot\Denali.Test\obj\Debug\Denali.Test.csproj.CopyComplete

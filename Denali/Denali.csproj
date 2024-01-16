@@ -39,9 +39,12 @@
     <Reference Include="System.Net.Http" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="HisseEmir.cs" />
+    <Compile Include="HisseEmirDurum.cs" />
     <Compile Include="Lib.cs" />
     <Compile Include="DatabaseManager.cs" />
     <Compile Include="IdealManager.cs" />
+    <Compile Include="ManuelAnalizStrateji.cs" />
     <Compile Include="RiskYoneticisi.cs" />
     <Compile Include="Hisse.cs" />
     <Compile Include="HisseHareket.cs" />

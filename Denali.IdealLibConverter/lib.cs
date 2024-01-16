@@ -1,4 +1,5 @@
 namespace ideal {
+
 public class DatabaseManager
 {
     static string connectionString = "Data Source=.;Initial Catalog=robot;User ID=sa;Password=1;Connection Timeout=30;Min Pool Size=5;Max Pool Size=15;Pooling=true;TrustServerCertificate=True;";
@@ -170,6 +171,62 @@ public class DatabaseManager
 
     }
 
+    public static System.Collections.Generic.List<HisseEmir> HisseEmirGetir(HisseEmirDurum durum)
+    {
+
+        var hisseEmirList = new System.Collections.Generic.List<HisseEmir>();
+
+        using (System.Data.SqlClient.SqlConnection connection = new System.Data.SqlClient.SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.Text;
+
+            cmd.CommandText = string.Format("select * from HisseEmir where durum='{0}'", durum.ToString());
+            //cmd.Parameters.AddWithValue("@durum", durum);
+
+            using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    HisseEmir hisseEmir = MapFromDataReader<HisseEmir>(reader);
+                    hisseEmirList.Add(hisseEmir);
+                }
+            }
+        }
+
+        return hisseEmirList;
+
+    }
+
+    public static void HisseEmirGuncelle(HisseEmir hisseEmir)
+    {
+        var conn = OpenConnection();
+
+        System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
+        cmd.CommandType = System.Data.CommandType.Text;
+        cmd.Connection = conn;
+        if (hisseEmir.SatisTarihi == System.DateTime.MinValue)
+        {
+            cmd.CommandText = "Update HisseEmir set Durum=@Durum, AlisTarihi=@AlisTarihi Where Id = @Id";
+            cmd.Parameters.AddWithValue("@AlisTarihi", hisseEmir.AlisTarihi);
+        }
+        else
+        {
+            cmd.CommandText = "Update HisseEmir set Durum=@Durum, Satistarihi=@SatisTarihi, Kar =@Kar  Where Id = @Id";
+            cmd.Parameters.AddWithValue("@Satistarihi", hisseEmir.SatisTarihi);
+            cmd.Parameters.AddWithValue("@Kar", hisseEmir.Kar);
+        }
+
+        cmd.Parameters.AddWithValue("@Id", hisseEmir.Id);
+        cmd.Parameters.AddWithValue("@Durum", hisseEmir.Durum);
+
+        cmd.ExecuteNonQuery();
+        cmd.Connection.Close();
+
+    }
+
     static T MapFromDataReader<T>(System.Data.SqlClient.SqlDataReader reader) where T : new()
     {
         T instance = new T();
@@ -223,6 +280,40 @@ public class Hisse
     public bool Aktif { get; set; }
 
 }
+
+public class HisseEmir
+{
+    public long Id { get; set; }
+
+    public string RobotAdi { get; internal set; }
+    public string HisseAdi { get; internal set; }
+    public int Lot { get; set; }
+    public double AlisHedefi { get; internal set; }
+    public double SatisHedefi { get; internal set; }
+    public double StopHedefi { get; internal set; }
+
+    public double Kar { get; internal set; }
+
+    public System.DateTime AlisTarihi { get; internal set; }
+
+    public System.DateTime SatisTarihi { get; internal set; }
+
+    public string Durum { get; internal set; }//Alis, Satis, Stop, Kar
+
+}
+
+
+
+
+public enum HisseEmirDurum
+{
+    Alinabilir, 
+    Satilabilir, 
+    StopOldu, 
+    KarAlindi
+}
+
+
 public class HisseHareket
 {
     public long Id { get; set; }
@@ -273,7 +364,6 @@ public class IdealManager
         //Emirler[] BekleyenList = BistHesap.BekleyenEmirler;
         //Emirler[] GerceklesenList = BistHesap.GerceklesenEmirler;
 
-        Sistem.Debug("Debug");
 
     }
 
@@ -299,7 +389,6 @@ public class IdealManager
 
     public static double YuksekGunGetir(dynamic Sistem, string hisse)
     {
-
         return Sistem.YuksekGun(hisseOrtam + hisse);
     }
 
@@ -309,10 +398,10 @@ public class IdealManager
         return Sistem.DusukGun(hisseOrtam + hisse);
     }
 
-    public static void Al(dynamic Sistem, Hisse hisse, int lot, double fiyat)
+    public static void Al(dynamic Sistem, string hisseAdi, int lot, double fiyat)
     {
 
-        Sistem.EmirSembol = "IMKBH'" + hisse.HisseAdi;
+        Sistem.EmirSembol = "IMKBH'" + hisseAdi;
         Sistem.EmirIslem = "ALIS";
         Sistem.EmirSuresi = "GUN"; // SEANS, GUN
         Sistem.EmirTipi = "Limit"; // NORMAL, KIE, KPY, AFE/KAFE
@@ -328,9 +417,9 @@ public class IdealManager
 
     }
 
-    public static void Sat(dynamic Sistem, Hisse hisse, int lot, double fiyat)
+    public static void Sat(dynamic Sistem, string hisseAdi, int lot, double fiyat)
     {
-        Sistem.EmirSembol = "IMKBH'" + hisse.HisseAdi;
+        Sistem.EmirSembol = "IMKBH'" + hisseAdi;
         Sistem.EmirIslem = "SATIS";
         Sistem.EmirSuresi = "GUN";
         Sistem.EmirTipi = "Limit";
@@ -459,8 +548,8 @@ public class IdealManager
     }
 }
 
-    public class Lib
-    {
+public class Lib
+{
         public void Baslat(dynamic Sistem, string hisseAdi)
         {
             Sistem.Debug("Basladik" + Sistem.Name);
@@ -508,7 +597,7 @@ public class IdealManager
 
             if (hisse.MarjTipi == 0)//kademe
             {
-                var kademeFiyati = (alisFiyati - satisFiyati);
+                var kademeFiyati = System.Math.Round((alisFiyati - satisFiyati), 2);
                 marj = hisse.Marj * kademeFiyati;
             }
             else if (hisse.MarjTipi == 1)//Binde
@@ -517,23 +606,12 @@ public class IdealManager
 
             }
 
-
-
-            var risk = RiskYoneticisi.AlisKontrolleri(hisse);
-
-            marj = marj * risk;
-            marj = System.Math.Round(marj, 2);
-
-            lot = IdealManager.DivideAndRoundToInt(hisse.AlimTutari, alisFiyati);
-
-            //lot = 1;
-
             if (IdealManager.SatisSaatiKontrolEt(Sistem) == false)
             {
                 var satisKontrol = DatabaseManager.HisseSatimKontrol(hisseAdi, satisFiyati, marj);
                 if (satisKontrol.Item1 > 0)
                 {
-                    IdealManager.Sat(Sistem, hisse, satisKontrol.Item1, satisFiyati);
+                    IdealManager.Sat(Sistem, hisse.HisseAdi, satisKontrol.Item1, satisFiyati);
                     foreach (var item in satisKontrol.Item2)
                     {
                         item.SatisFiyati = satisFiyati;
@@ -551,38 +629,120 @@ public class IdealManager
             if (IdealManager.AlisSaatiKontrolEt(Sistem) == false)
             {
 
-                var hisseAlimKontrol = DatabaseManager.HisseAlimKontrol(hisseAdi, alisFiyati, marj);
-                if (hisseAlimKontrol)
+                var risk = RiskYoneticisi.RiskHesapla(Sistem, hisse, alisFiyati, marj);
+                if (risk > 0)
                 {
-                    IdealManager.Al(Sistem, hisse, lot, alisFiyati);
-                    var hisseAl = new HisseHareket();
-                    hisseAl.AlisFiyati = alisFiyati;
-                    hisseAl.HisseAdi = hisseAdi;
-                    hisseAl.Lot = lot;
-                    hisseAl.RobotAdi = Sistem.Name;
-                    DatabaseManager.HisseHareketEkleGuncelle(hisseAl);
+                    marj = System.Math.Round(marj * risk, 2);
+
+                    lot = IdealManager.DivideAndRoundToInt(hisse.AlimTutari, alisFiyati);
+
+                    var hisseAlimKontrol = DatabaseManager.HisseAlimKontrol(hisseAdi, alisFiyati, marj);
+                    if (hisseAlimKontrol)
+                    {
+                        IdealManager.Al(Sistem, hisse.HisseAdi, lot, alisFiyati);
+                        var hisseAl = new HisseHareket();
+                        hisseAl.AlisFiyati = alisFiyati;
+                        hisseAl.HisseAdi = hisseAdi;
+                        hisseAl.Lot = lot;
+                        hisseAl.RobotAdi = Sistem.Name;
+                        DatabaseManager.HisseHareketEkleGuncelle(hisseAl);
+                    }
+                    else
+                    {
+                        Sistem.Debug(string.Format("{0} {1} alis icin uygun degil", hisseAdi, alisFiyati));
+                    }
                 }
-                else
-                {
-                    Sistem.Debug(string.Format("{0} {1} alis icin uygun degil", hisseAdi, alisFiyati));
-                }
+               
+            }
+        }
+
+    public void ManuelAnalizBaslat(dynamic Sistem)
+    {
+        ManuelAnalizStrateji.Baslat(Sistem);
+    }
+}
+
+
+
+public class ManuelAnalizStrateji
+{
+    public static void Baslat(dynamic Sistem)
+    {
+        Sistem.Debug("Basladik" + Sistem.Name);
+
+        Sistem.AlgoIslem = "OK";
+        if (Sistem.BaglantiVar == false)
+        {
+            Sistem.Debug("Baglanti Yok");
+            return;
+        }
+
+        if (IdealManager.SaatiKontrolEt(Sistem) == true)
+        {
+            Sistem.Debug("Saat Uygun Degil");
+            return;
+        }
+
+        var hisseEmirList = DatabaseManager.HisseEmirGetir(HisseEmirDurum.Satilabilir);
+        foreach (var hisseEmir in hisseEmirList)
+        {
+            double satisFiyati = IdealManager.SatisFiyatiGetir(Sistem, hisseEmir.HisseAdi);
+            if (satisFiyati == 0 || satisFiyati == 0)
+            {
+                //devre kesmis
+                continue;
+            }
+            if (hisseEmir.SatisHedefi <= satisFiyati)
+            {
+                IdealManager.Sat(Sistem, hisseEmir.HisseAdi, hisseEmir.Lot, satisFiyati);
+                hisseEmir.SatisTarihi = System.DateTime.Now;
+                hisseEmir.Durum = HisseEmirDurum.KarAlindi.ToString();
+                hisseEmir.Kar = System.Math.Round(satisFiyati - hisseEmir.AlisHedefi, 2);
+                DatabaseManager.HisseEmirGuncelle(hisseEmir);
+            }
+
+            if (hisseEmir.StopHedefi >= satisFiyati)
+            {
+                IdealManager.Sat(Sistem, hisseEmir.HisseAdi, hisseEmir.Lot, satisFiyati);
+                hisseEmir.SatisTarihi = System.DateTime.Now;
+                hisseEmir.Durum = HisseEmirDurum.StopOldu.ToString();
+                hisseEmir.Kar = System.Math.Round(satisFiyati - hisseEmir.AlisHedefi, 2);
+                DatabaseManager.HisseEmirGuncelle(hisseEmir);
+            }
+        }
+
+        hisseEmirList = DatabaseManager.HisseEmirGetir(HisseEmirDurum.Alinabilir);
+        foreach (var hisseEmir in hisseEmirList)
+        {
+            double alisFiyati = IdealManager.AlisFiyatiGetir(Sistem, hisseEmir.HisseAdi);
+            if (alisFiyati == 0 || alisFiyati == 0)
+            {
+                //devre kesmis
+                continue;
+            }
+            if (hisseEmir.AlisHedefi >= alisFiyati)
+            {
+                IdealManager.Al(Sistem, hisseEmir.HisseAdi, hisseEmir.Lot, alisFiyati);
+                hisseEmir.AlisTarihi = System.DateTime.Now;
+                hisseEmir.Durum = HisseEmirDurum.Satilabilir.ToString();
+                DatabaseManager.HisseEmirGuncelle(hisseEmir);
             }
         }
     }
-
+}
 
 
 public class RiskYoneticisi
 {
     //1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 23
-    public static int AlisKontrolleri(Hisse hisse)
+    public static int RiskHesapla(Hisse hisse)
     {
         var hissePozisyonlari = DatabaseManager.AcikHissePozisyonlariGetir(hisse.HisseAdi);
         var rtn = 1;
         if (hissePozisyonlari == null)
             return rtn;
 
-        var percentage = IdealManager.CalculatePercentage(hissePozisyonlari.ToplamAlisFiyati, hisse.Butce);
+        var percentage = IdealManager.CalculatePercentage(hissePozisyonlari.AcikPozisyonAlimTutari, hisse.Butce);
 
         if (percentage < 30)
         {
@@ -607,6 +767,15 @@ public class RiskYoneticisi
 
         return rtn;
 
+    }
+
+    public static int RiskHesapla(dynamic Sistem, Hisse hisse, double alistutari, double marj)
+    {
+        double yuksekGun = IdealManager.YuksekGunGetir(Sistem, hisse.HisseAdi);
+        if(alistutari + marj>=yuksekGun)
+            return 0;
+
+        return RiskHesapla(hisse);
     }
 
 

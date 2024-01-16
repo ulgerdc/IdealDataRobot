@@ -4,3 +4,9 @@ C:\iko\Denali\bin\Debug\Denali.dll
 C:\iko\Denali\bin\Debug\Denali.pdb
 C:\iko\Denali\obj\Debug\Denali.dll
 C:\iko\Denali\obj\Debug\Denali.pdb
+C:\iko\robot\Denali\bin\Debug\ideal.dll
+C:\iko\robot\Denali\bin\Debug\ideal.pdb
+C:\iko\robot\Denali\obj\Debug\Denali.csproj.AssemblyReference.cache
+C:\iko\robot\Denali\obj\Debug\Denali.csproj.CoreCompileInputs.cache
+C:\iko\robot\Denali\obj\Debug\ideal.dll
+C:\iko\robot\Denali\obj\Debug\ideal.pdb
