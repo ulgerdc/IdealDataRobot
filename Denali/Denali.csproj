@@ -44,6 +44,7 @@
     <Compile Include="Lib.cs" />
     <Compile Include="DatabaseManager.cs" />
     <Compile Include="IdealManager.cs" />
+    <Compile Include="TestStrateji.cs" />
     <Compile Include="ManuelAnalizStrateji.cs" />
     <Compile Include="RiskYoneticisi.cs" />
     <Compile Include="Hisse.cs" />

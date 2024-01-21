@@ -3,7 +3,8 @@ public class Lib
 {
         public void Baslat(dynamic Sistem, string hisseAdi)
         {
-            Sistem.Debug("Basladik" + Sistem.Name);
+           
+            //Sistem.Debug("Basladik" + Sistem.Name);
 
             Sistem.AlgoIslem = "OK";
             if (Sistem.BaglantiVar == false)
@@ -14,15 +15,15 @@ public class Lib
 
             if (IdealManager.SaatiKontrolEt(Sistem) == true)
             {
-                Sistem.Debug("Saat Uygun Degil");
+                //Sistem.Debug("Saat Uygun Degil");
                 return;
             }
 
             double alisFiyati = IdealManager.AlisFiyatiGetir(Sistem, hisseAdi);//303.25
-            Sistem.Debug(string.Format("AlisFiyat {0}", alisFiyati));
+            //Sistem.Debug(string.Format("AlisFiyat {0}", alisFiyati));
 
             double satisFiyati = IdealManager.SatisFiyatiGetir(Sistem, hisseAdi);//303.00
-            Sistem.Debug(string.Format("SatisFiyat {0}", satisFiyati));
+            //Sistem.Debug(string.Format("SatisFiyat {0}", satisFiyati));
 
             if (alisFiyati == 0 || satisFiyati == 0)
             {
@@ -85,7 +86,9 @@ public class Lib
                 {
                     marj = System.Math.Round(marj * risk, 2);
 
-                    lot = IdealManager.DivideAndRoundToInt(hisse.AlimTutari, alisFiyati);
+                    var endeksBoleni = RiskYoneticisi.EndeksDegerlendir(Sistem, hisse);
+                    var alimTutari = IdealManager.DivideAndRoundToInt(hisse.AlimTutari, endeksBoleni); 
+                    lot = IdealManager.DivideAndRoundToInt(alimTutari, alisFiyati);
 
                     var hisseAlimKontrol = DatabaseManager.HisseAlimKontrol(hisseAdi, alisFiyati, marj);
                     if (hisseAlimKontrol)
@@ -110,6 +113,11 @@ public class Lib
     public void ManuelAnalizBaslat(dynamic Sistem)
     {
         ManuelAnalizStrateji.Baslat(Sistem);
+    }
+
+    public void TestStratejiBaslat(dynamic Sistem, string hisseAdi)
+    {
+        TestStrateji.Baslat(Sistem, hisseAdi);
     }
 }
 

@@ -2,7 +2,9 @@
 public class IdealManager
 {
     static string hisseOrtam = "IMKBH'";
-
+    static string bist100 = "IMKBX'XU100";
+    static string bist30 = "IMKBX'XU30";
+    static string viop30 = "VIP'VIP-X030";
     public static bool SaatiKontrolEt(dynamic Sistem)
     {
         return (Sistem.Saat.CompareTo("10:00:00") <= 0 || Sistem.Saat.CompareTo("17:59:59") >= 0);
@@ -60,6 +62,65 @@ public class IdealManager
         return Sistem.DusukGun(hisseOrtam + hisse);
     }
 
+    public static double DusukGunGetirBist100(dynamic Sistem)
+    {
+
+        return Sistem.DusukGun(bist100);
+    }
+
+    public static double YuksekGunGetirBist100(dynamic Sistem)
+    {
+
+        return Sistem.YuksekGun(bist100);
+    }
+
+    public static double DusukGunGetirBist30(dynamic Sistem)
+    {
+
+        return Sistem.DusukGun(bist30);
+    }
+
+    public static double YuksekGunGetirBist30(dynamic Sistem)
+    {
+
+        return Sistem.YuksekGun(bist30);
+    }
+
+    public static double DusukGunGetirViop30(dynamic Sistem)
+    {
+
+        return Sistem.DusukGun(viop30);
+    }
+
+    public static double YuksekGunGetirViop30(dynamic Sistem)
+    {
+
+        return Sistem.YuksekGun(viop30);
+    }
+
+    public static double Bist100EndeksYuzde(dynamic Sistem)
+    {
+        var Endeks = Sistem.YuzeyselVeriOku(bist100);
+        return Endeks.NetPerDay;
+    }
+
+    public static double Bist30EndeksYuzde(dynamic Sistem)
+    {
+        var Endeks = Sistem.YuzeyselVeriOku(bist30);
+        return Endeks.NetPerDay;
+    }
+
+    public static double Viop30EndeksYuzde(dynamic Sistem)
+    {
+        var Endeks = Sistem.YuzeyselVeriOku(viop30);
+        return Endeks.NetPerDay;
+    }
+
+    public static double HisseYuzde(dynamic Sistem,string hisse)
+    {
+        var Endeks = Sistem.YuzeyselVeriOku(hisseOrtam + hisse);
+        return Endeks.NetPerDay;
+    }
     public static void Al(dynamic Sistem, string hisseAdi, int lot, double fiyat)
     {
 

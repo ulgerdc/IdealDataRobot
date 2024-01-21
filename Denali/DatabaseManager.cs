@@ -105,7 +105,7 @@ public class DatabaseManager
 
             cmd.CommandText = "[dbo].[sel_hisseSatimKontrol]";
             cmd.Parameters.AddWithValue("@HisseAdi", hisseAdi);
-            cmd.Parameters.AddWithValue("@SatisFiyati", satisFiyati);
+            cmd.Parameters.AddWithValue("@SatisFiyati", System.Math.Round(satisFiyati, 2));
             cmd.Parameters.AddWithValue("@Marj", marj);
 
             using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
@@ -135,7 +135,7 @@ public class DatabaseManager
             cmd.CommandType = System.Data.CommandType.StoredProcedure;
             cmd.CommandText = "[dbo].[sel_hisseAlimKontrol]";
             cmd.Parameters.AddWithValue("@HisseAdi", hisseAdi);
-            cmd.Parameters.AddWithValue("@AlisFiyati", alisFiyati);
+            cmd.Parameters.AddWithValue("@AlisFiyati", System.Math.Round(alisFiyati, 2));
             cmd.Parameters.AddWithValue("@Marj", marj);
 
             using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
@@ -222,6 +222,21 @@ public class DatabaseManager
         cmd.Parameters.AddWithValue("@Id", hisseEmir.Id);
         cmd.Parameters.AddWithValue("@Durum", hisseEmir.Durum);
 
+        cmd.ExecuteNonQuery();
+        cmd.Connection.Close();
+
+    }
+
+    public static void RiskDetayEkle(string hisseAdi, string data)
+    {
+        var conn = OpenConnection();
+
+        System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
+        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+        cmd.Connection = conn;
+        cmd.CommandText = "ins_RiskDetay";
+        cmd.Parameters.AddWithValue("@HisseAdi", hisseAdi);
+        cmd.Parameters.AddWithValue("@Data", data);
         cmd.ExecuteNonQuery();
         cmd.Connection.Close();
 
