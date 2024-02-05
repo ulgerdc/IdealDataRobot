@@ -72,5 +72,17 @@ namespace Denali.Test
             return 1;
         }
 
+        public Endeks YuzeyselVeriOku(string v)
+        {
+            return new Endeks() { NetPerDay=1 };
+        }
+
+        
+
+    }
+
+    public class Endeks
+    {
+        public double NetPerDay { get; set; }
     }
 }

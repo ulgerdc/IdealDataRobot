@@ -25,6 +25,7 @@ namespace Denali.Test
             //sonfiyat = 15.92D;
             for (int i = 0; i < 100; i++)
             {
+                SabahCoskusuStrateji.Baslat(sistemMock);
                 //ManuelAnalizStrateji.Baslat(sistemMock);
 
                 lib.Baslat(sistemMock, hisse);

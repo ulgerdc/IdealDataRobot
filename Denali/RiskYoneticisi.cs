@@ -58,40 +58,57 @@ public class RiskYoneticisi
         double hisseYuzde = IdealManager.HisseYuzde(Sistem, hisse.HisseAdi);
         int rtn = 0;
 
-        if (bist100Yuzde > 0 && bist30Yuzde > 0 && viop30Yuzde > 0 && hisseYuzde > 0)
+        try
         {
-            
-            rtn = customFibonacciList[0];
-            return rtn;
+            if (bist100Yuzde > 0 && bist30Yuzde > 0 && viop30Yuzde > 0 && hisseYuzde > 0)
+            {
+
+                rtn = customFibonacciList[0];
+                return rtn;
+            }
+
+            if (bist100Yuzde < 0 && bist30Yuzde < 0 && viop30Yuzde < 0)
+                rtn = 1;
+
+            if (bist100Yuzde < -1 && bist30Yuzde < -1 && viop30Yuzde < -1)
+                rtn = 2;
+
+            if (bist100Yuzde < -2 && bist30Yuzde < -2 && viop30Yuzde < -2)
+                rtn = 3;
+
+            if (bist100Yuzde < -3 && bist30Yuzde < -3 && viop30Yuzde < -3)
+                rtn = 4;
+
+            if (bist100Yuzde < -5 && bist30Yuzde < -5 && viop30Yuzde < -5)
+                rtn = 5;
+
+            if (hisseYuzde > 1 && rtn >1)
+                rtn = rtn - 1;
+
+            DatabaseManager.RiskDetayEkle(hisse.HisseAdi, string.Format("EndeksDegerlendir bist100Yuzde={0} bist30Yuzde={1} viop30Yuzde={2} hisseYuzde={3} fibo={4}",
+                System.Math.Round(bist100Yuzde, 2),
+                System.Math.Round(bist30Yuzde, 2),
+                System.Math.Round(viop30Yuzde, 2),
+                System.Math.Round(hisseYuzde, 2),
+                customFibonacciList[rtn]
+                ));
+
+
+            return customFibonacciList[rtn];
         }
-            
-        if (bist100Yuzde<0 && bist30Yuzde < 0 && viop30Yuzde < 0)
-            rtn = 1;
+        catch(System.Exception ex)
+        {
+            DatabaseManager.RiskDetayEkle(hisse.HisseAdi, string.Format("Exception bist100Yuzde={0} bist30Yuzde={1} viop30Yuzde={2} hisseYuzde={3} rtn={4}",
+               System.Math.Round(bist100Yuzde, 2),
+               System.Math.Round(bist30Yuzde, 2),
+               System.Math.Round(viop30Yuzde, 2),
+               System.Math.Round(hisseYuzde, 2),
+               rtn
+               ));
+            return 1;
+        }
 
-        if (bist100Yuzde < -1 && bist30Yuzde < -1 && viop30Yuzde < -1)
-            rtn = 2;
-
-        if (bist100Yuzde < -2 && bist30Yuzde < -2 && viop30Yuzde < -2)
-            rtn = 3;
-
-        if (bist100Yuzde < -3 && bist30Yuzde < -3 && viop30Yuzde < -3)
-            rtn = 4;
-
-        if (bist100Yuzde < -5 && bist30Yuzde < -5 && viop30Yuzde < -5)
-            rtn = 5;
-
-        if (hisseYuzde > 0)
-            rtn = rtn - 1;
-
-        DatabaseManager.RiskDetayEkle(hisse.HisseAdi, string.Format("EndeksDegerlendir bist100Yuzde={0} bist30Yuzde={1} viop30Yuzde={2} hisseYuzde={3} fibo={4}",
-            System.Math.Round(bist100Yuzde, 2),
-            System.Math.Round(bist30Yuzde, 2),
-            System.Math.Round(viop30Yuzde, 2),
-            System.Math.Round(hisseYuzde, 2),
-            customFibonacciList[rtn]
-            ));
-
-        return customFibonacciList[rtn];
+        
     }
 
 

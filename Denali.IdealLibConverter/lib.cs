@@ -171,6 +171,78 @@ public class DatabaseManager
 
     }
 
+    public static bool SabahCoskusuKontrol(string hisseAdi)
+    {
+        bool al = true;
+
+        using (System.Data.SqlClient.SqlConnection connection = new System.Data.SqlClient.SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+            cmd.CommandText = "[dbo].[sel_sabahcoskusukontrol]";
+            cmd.Parameters.AddWithValue("@HisseAdi", hisseAdi);
+ 
+            using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    al = false;
+                }
+            }
+        }
+
+        return al;
+
+    }
+
+    public static void SabahCoskusuHareketGuncelle(SabahCoskusuHareket hisseHareket)
+    {
+        var conn = OpenConnection();
+
+        System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
+        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+        cmd.Connection = conn;
+        cmd.CommandText = "[dbo].[ins_sabahcoskusuhareket]";
+
+        cmd.Parameters.AddWithValue("@Id", hisseHareket.Id);
+        cmd.Parameters.AddWithValue("@HisseAdi", hisseHareket.HisseAdi);
+        cmd.Parameters.AddWithValue("@Lot", hisseHareket.Lot);
+        cmd.Parameters.AddWithValue("@AlisFiyati", hisseHareket.AlisFiyati);
+        cmd.Parameters.AddWithValue("@RobotAdi", hisseHareket.RobotAdi);
+        cmd.ExecuteNonQuery();
+        cmd.Connection.Close();
+
+    }
+
+    public static System.Collections.Generic.List<Hisse> SabahCoskusuGetir()
+    {
+
+        var hisseEmirList = new System.Collections.Generic.List<Hisse>();
+
+        using (System.Data.SqlClient.SqlConnection connection = new System.Data.SqlClient.SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+
+            cmd.CommandText = "[dbo].[sel_sabahcoskusu]"; 
+           
+            using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    Hisse hisseEmir = MapFromDataReader<Hisse>(reader);
+                    hisseEmirList.Add(hisseEmir);
+                }
+            }
+        }
+
+        return hisseEmirList;
+
+    }
     public static System.Collections.Generic.List<HisseEmir> HisseEmirGetir(HisseEmirDurum durum)
     {
 
@@ -356,7 +428,7 @@ public class IdealManager
 {
     static string hisseOrtam = "IMKBH'";
     static string bist100 = "IMKBX'XU100";
-    static string bist30 = "IMKBX'XU30";
+    static string bist30 = "IMKBX'XU030";
     static string viop30 = "VIP'VIP-X030";
     public static bool SaatiKontrolEt(dynamic Sistem)
     {
@@ -370,6 +442,11 @@ public class IdealManager
     public static bool SatisSaatiKontrolEt(dynamic Sistem)
     {
         return (Sistem.Saat.CompareTo("10:00:00") <= 0 || Sistem.Saat.CompareTo("17:59:59") >= 0);
+    }
+
+    public static bool SabahCoskusuAlimSaatiKontrolEt(dynamic Sistem)
+    {
+        return (Sistem.Saat.CompareTo("17:58:00") <= 0 || Sistem.Saat.CompareTo("17:59:59") >= 0);
     }
 
     public static void HesapOku(dynamic Sistem)
@@ -714,6 +791,7 @@ public class Lib
                     var endeksBoleni = RiskYoneticisi.EndeksDegerlendir(Sistem, hisse);
                     var alimTutari = IdealManager.DivideAndRoundToInt(hisse.AlimTutari, endeksBoleni); 
                     lot = IdealManager.DivideAndRoundToInt(alimTutari, alisFiyati);
+                
 
                     var hisseAlimKontrol = DatabaseManager.HisseAlimKontrol(hisseAdi, alisFiyati, marj);
                     if (hisseAlimKontrol)
@@ -875,45 +953,130 @@ public class RiskYoneticisi
         double hisseYuzde = IdealManager.HisseYuzde(Sistem, hisse.HisseAdi);
         int rtn = 0;
 
-        if (bist100Yuzde > 0 && bist30Yuzde > 0 && viop30Yuzde > 0 && hisseYuzde > 0)
+        try
         {
-            
-            rtn = customFibonacciList[0];
-            return rtn;
+            if (bist100Yuzde > 0 && bist30Yuzde > 0 && viop30Yuzde > 0 && hisseYuzde > 0)
+            {
+
+                rtn = customFibonacciList[0];
+                return rtn;
+            }
+
+            if (bist100Yuzde < 0 && bist30Yuzde < 0 && viop30Yuzde < 0)
+                rtn = 1;
+
+            if (bist100Yuzde < -1 && bist30Yuzde < -1 && viop30Yuzde < -1)
+                rtn = 2;
+
+            if (bist100Yuzde < -2 && bist30Yuzde < -2 && viop30Yuzde < -2)
+                rtn = 3;
+
+            if (bist100Yuzde < -3 && bist30Yuzde < -3 && viop30Yuzde < -3)
+                rtn = 4;
+
+            if (bist100Yuzde < -5 && bist30Yuzde < -5 && viop30Yuzde < -5)
+                rtn = 5;
+
+            if (hisseYuzde > 1 && rtn >1)
+                rtn = rtn - 1;
+
+            DatabaseManager.RiskDetayEkle(hisse.HisseAdi, string.Format("EndeksDegerlendir bist100Yuzde={0} bist30Yuzde={1} viop30Yuzde={2} hisseYuzde={3} fibo={4}",
+                System.Math.Round(bist100Yuzde, 2),
+                System.Math.Round(bist30Yuzde, 2),
+                System.Math.Round(viop30Yuzde, 2),
+                System.Math.Round(hisseYuzde, 2),
+                customFibonacciList[rtn]
+                ));
+
+
+            return customFibonacciList[rtn];
         }
-            
-        if (bist100Yuzde<0 && bist30Yuzde < 0 && viop30Yuzde < 0)
-            rtn = 1;
+        catch(System.Exception ex)
+        {
+            DatabaseManager.RiskDetayEkle(hisse.HisseAdi, string.Format("Exception bist100Yuzde={0} bist30Yuzde={1} viop30Yuzde={2} hisseYuzde={3} rtn={4}",
+               System.Math.Round(bist100Yuzde, 2),
+               System.Math.Round(bist30Yuzde, 2),
+               System.Math.Round(viop30Yuzde, 2),
+               System.Math.Round(hisseYuzde, 2),
+               rtn
+               ));
+            return 1;
+        }
 
-        if (bist100Yuzde < -1 && bist30Yuzde < -1 && viop30Yuzde < -1)
-            rtn = 2;
-
-        if (bist100Yuzde < -2 && bist30Yuzde < -2 && viop30Yuzde < -2)
-            rtn = 3;
-
-        if (bist100Yuzde < -3 && bist30Yuzde < -3 && viop30Yuzde < -3)
-            rtn = 4;
-
-        if (bist100Yuzde < -5 && bist30Yuzde < -5 && viop30Yuzde < -5)
-            rtn = 5;
-
-        if (hisseYuzde > 0)
-            rtn = rtn - 1;
-
-        DatabaseManager.RiskDetayEkle(hisse.HisseAdi, string.Format("EndeksDegerlendir bist100Yuzde={0} bist30Yuzde={1} viop30Yuzde={2} hisseYuzde={3} fibo={4}",
-            System.Math.Round(bist100Yuzde, 2),
-            System.Math.Round(bist30Yuzde, 2),
-            System.Math.Round(viop30Yuzde, 2),
-            System.Math.Round(hisseYuzde, 2),
-            customFibonacciList[rtn]
-            ));
-
-        return customFibonacciList[rtn];
+        
     }
 
 
 
 }
+public class SabahCoskusuHareket
+{
+    public long Id { get; set; }
+    public string RobotAdi { get; internal set; }
+    public string HisseAdi { get; internal set; }
+    public double AlisFiyati { get; internal set; }
+    public int Lot { get; set; }
+    public bool AktifMi { get; internal set; }
+}
+
+public class SabahCoskusuStrateji
+{
+    public static void Baslat(dynamic Sistem)
+    {
+        Sistem.Debug("Basladik" + Sistem.Name);
+
+        Sistem.AlgoIslem = "OK";
+        if (Sistem.BaglantiVar == false)
+        {
+            Sistem.Debug("Baglanti Yok");
+            return;
+        }
+
+        if (IdealManager.SabahCoskusuAlimSaatiKontrolEt(Sistem) == true)
+        {
+            Sistem.Debug("Saat Uygun Degil");
+            return;
+        }
+
+        var hisseList = DatabaseManager.SabahCoskusuGetir();
+    
+        foreach (var hisse in hisseList)
+        {
+            double alisFiyati = IdealManager.AlisFiyatiGetir(Sistem, hisse.HisseAdi);
+            int lot;
+            var al = DatabaseManager.SabahCoskusuKontrol(hisse.HisseAdi);
+            if (al)
+            {
+                lot = IdealManager.DivideAndRoundToInt(hisse.AlimTutari, alisFiyati);
+
+                if (RiskYoneticisi.EndeksDegerlendir(Sistem,hisse) == 1)
+                {
+                    IdealManager.Al(Sistem, hisse.HisseAdi, lot, alisFiyati);
+                    var hisseAl = new HisseHareket();
+                    hisseAl.AlisFiyati = alisFiyati;
+                    hisseAl.HisseAdi = hisse.HisseAdi;
+                    hisseAl.Lot = lot;
+                    hisseAl.RobotAdi = Sistem.Name;
+                    var sabahCoskusu = new SabahCoskusuHareket();
+                    sabahCoskusu.AlisFiyati = alisFiyati;
+                    sabahCoskusu.HisseAdi = hisse.HisseAdi;
+                    sabahCoskusu.Lot = lot;
+                    sabahCoskusu.RobotAdi = Sistem.Name;
+
+                    DatabaseManager.SabahCoskusuHareketGuncelle(sabahCoskusu);
+                    DatabaseManager.HisseHareketEkleGuncelle(hisseAl);
+                }
+                else
+                {
+                    Sistem.Debug(string.Format("{0} {1} alis icin uygun degil", hisse.HisseAdi, alisFiyati));
+                }
+            }
+        }
+    }
+
+  
+}
+
 
 public class TestStrateji
 {

@@ -171,6 +171,78 @@ public class DatabaseManager
 
     }
 
+    public static bool SabahCoskusuKontrol(string hisseAdi)
+    {
+        bool al = true;
+
+        using (System.Data.SqlClient.SqlConnection connection = new System.Data.SqlClient.SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+            cmd.CommandText = "[dbo].[sel_sabahcoskusukontrol]";
+            cmd.Parameters.AddWithValue("@HisseAdi", hisseAdi);
+ 
+            using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    al = false;
+                }
+            }
+        }
+
+        return al;
+
+    }
+
+    public static void SabahCoskusuHareketGuncelle(SabahCoskusuHareket hisseHareket)
+    {
+        var conn = OpenConnection();
+
+        System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
+        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+        cmd.Connection = conn;
+        cmd.CommandText = "[dbo].[ins_sabahcoskusuhareket]";
+
+        cmd.Parameters.AddWithValue("@Id", hisseHareket.Id);
+        cmd.Parameters.AddWithValue("@HisseAdi", hisseHareket.HisseAdi);
+        cmd.Parameters.AddWithValue("@Lot", hisseHareket.Lot);
+        cmd.Parameters.AddWithValue("@AlisFiyati", hisseHareket.AlisFiyati);
+        cmd.Parameters.AddWithValue("@RobotAdi", hisseHareket.RobotAdi);
+        cmd.ExecuteNonQuery();
+        cmd.Connection.Close();
+
+    }
+
+    public static System.Collections.Generic.List<Hisse> SabahCoskusuGetir()
+    {
+
+        var hisseEmirList = new System.Collections.Generic.List<Hisse>();
+
+        using (System.Data.SqlClient.SqlConnection connection = new System.Data.SqlClient.SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+
+            cmd.CommandText = "[dbo].[sel_sabahcoskusu]"; 
+           
+            using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    Hisse hisseEmir = MapFromDataReader<Hisse>(reader);
+                    hisseEmirList.Add(hisseEmir);
+                }
+            }
+        }
+
+        return hisseEmirList;
+
+    }
     public static System.Collections.Generic.List<HisseEmir> HisseEmirGetir(HisseEmirDurum durum)
     {
 

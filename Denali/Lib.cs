@@ -89,6 +89,7 @@ public class Lib
                     var endeksBoleni = RiskYoneticisi.EndeksDegerlendir(Sistem, hisse);
                     var alimTutari = IdealManager.DivideAndRoundToInt(hisse.AlimTutari, endeksBoleni); 
                     lot = IdealManager.DivideAndRoundToInt(alimTutari, alisFiyati);
+                
 
                     var hisseAlimKontrol = DatabaseManager.HisseAlimKontrol(hisseAdi, alisFiyati, marj);
                     if (hisseAlimKontrol)
