@@ -818,6 +818,11 @@ public class Lib
         ManuelAnalizStrateji.Baslat(Sistem);
     }
 
+    public void SabahCoskusuBaslat(dynamic Sistem)
+    {
+        SabahCoskusuStrateji.Baslat(Sistem);
+    }
+
     public void TestStratejiBaslat(dynamic Sistem, string hisseAdi)
     {
         TestStrateji.Baslat(Sistem, hisseAdi);
@@ -953,8 +958,8 @@ public class RiskYoneticisi
         double hisseYuzde = IdealManager.HisseYuzde(Sistem, hisse.HisseAdi);
         int rtn = 0;
 
-        try
-        {
+        //try
+        //{
             if (bist100Yuzde > 0 && bist30Yuzde > 0 && viop30Yuzde > 0 && hisseYuzde > 0)
             {
 
@@ -980,28 +985,28 @@ public class RiskYoneticisi
             if (hisseYuzde > 1 && rtn >1)
                 rtn = rtn - 1;
 
-            DatabaseManager.RiskDetayEkle(hisse.HisseAdi, string.Format("EndeksDegerlendir bist100Yuzde={0} bist30Yuzde={1} viop30Yuzde={2} hisseYuzde={3} fibo={4}",
-                System.Math.Round(bist100Yuzde, 2),
-                System.Math.Round(bist30Yuzde, 2),
-                System.Math.Round(viop30Yuzde, 2),
-                System.Math.Round(hisseYuzde, 2),
-                customFibonacciList[rtn]
-                ));
+            //DatabaseManager.RiskDetayEkle(hisse.HisseAdi, string.Format("EndeksDegerlendir bist100Yuzde={0} bist30Yuzde={1} viop30Yuzde={2} hisseYuzde={3} fibo={4}",
+            //    System.Math.Round(bist100Yuzde, 2),
+            //    System.Math.Round(bist30Yuzde, 2),
+            //    System.Math.Round(viop30Yuzde, 2),
+            //    System.Math.Round(hisseYuzde, 2),
+            //    customFibonacciList[rtn]
+            //    ));
 
 
             return customFibonacciList[rtn];
-        }
-        catch(System.Exception ex)
-        {
-            DatabaseManager.RiskDetayEkle(hisse.HisseAdi, string.Format("Exception bist100Yuzde={0} bist30Yuzde={1} viop30Yuzde={2} hisseYuzde={3} rtn={4}",
-               System.Math.Round(bist100Yuzde, 2),
-               System.Math.Round(bist30Yuzde, 2),
-               System.Math.Round(viop30Yuzde, 2),
-               System.Math.Round(hisseYuzde, 2),
-               rtn
-               ));
-            return 1;
-        }
+        //}
+        //catch(System.Exception ex)
+        //{
+        //    //DatabaseManager.RiskDetayEkle(hisse.HisseAdi, string.Format("Exception bist100Yuzde={0} bist30Yuzde={1} viop30Yuzde={2} hisseYuzde={3} rtn={4}",
+        //    //   System.Math.Round(bist100Yuzde, 2),
+        //    //   System.Math.Round(bist30Yuzde, 2),
+        //    //   System.Math.Round(viop30Yuzde, 2),
+        //    //   System.Math.Round(hisseYuzde, 2),
+        //    //   rtn
+        //    //   ));
+        //    return 1;
+        //}
 
         
     }

@@ -116,6 +116,11 @@ public class Lib
         ManuelAnalizStrateji.Baslat(Sistem);
     }
 
+    public void SabahCoskusuBaslat(dynamic Sistem)
+    {
+        SabahCoskusuStrateji.Baslat(Sistem);
+    }
+
     public void TestStratejiBaslat(dynamic Sistem, string hisseAdi)
     {
         TestStrateji.Baslat(Sistem, hisseAdi);

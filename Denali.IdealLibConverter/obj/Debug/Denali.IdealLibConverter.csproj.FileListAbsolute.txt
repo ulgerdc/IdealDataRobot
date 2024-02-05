@@ -1,7 +1,0 @@
-C:\iko\robot\Denali.IdealLibConverter\bin\Debug\Denali.IdealLibConverter.exe.config
-C:\iko\robot\Denali.IdealLibConverter\bin\Debug\Denali.IdealLibConverter.exe
-C:\iko\robot\Denali.IdealLibConverter\bin\Debug\Denali.IdealLibConverter.pdb
-C:\iko\robot\Denali.IdealLibConverter\obj\Debug\Denali.IdealLibConverter.csproj.AssemblyReference.cache
-C:\iko\robot\Denali.IdealLibConverter\obj\Debug\Denali.IdealLibConverter.csproj.CoreCompileInputs.cache
-C:\iko\robot\Denali.IdealLibConverter\obj\Debug\Denali.IdealLibConverter.exe
-C:\iko\robot\Denali.IdealLibConverter\obj\Debug\Denali.IdealLibConverter.pdb
