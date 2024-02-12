@@ -19,17 +19,21 @@ public class SabahCoskusuStrateji
         }
 
         var hisseList = DatabaseManager.SabahCoskusuGetir();
-    
+
         foreach (var hisse in hisseList)
         {
             double alisFiyati = IdealManager.AlisFiyatiGetir(Sistem, hisse.HisseAdi);
+            if (alisFiyati == 0)
+                continue;
+
             int lot;
             var al = DatabaseManager.SabahCoskusuKontrol(hisse.HisseAdi);
             if (al)
             {
+
                 lot = IdealManager.DivideAndRoundToInt(hisse.AlimTutari, alisFiyati);
 
-                if (RiskYoneticisi.EndeksDegerlendir(Sistem,hisse) == 1)
+                if (RiskYoneticisi.SabahCoskusuDegerlendir(Sistem, hisse) == 1)
                 {
                     IdealManager.Al(Sistem, hisse.HisseAdi, lot, alisFiyati);
                     var hisseAl = new HisseHareket();
@@ -50,9 +54,10 @@ public class SabahCoskusuStrateji
                 {
                     Sistem.Debug(string.Format("{0} {1} alis icin uygun degil", hisse.HisseAdi, alisFiyati));
                 }
+
             }
         }
     }
 
-  
+
 }

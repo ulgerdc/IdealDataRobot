@@ -113,4 +113,22 @@ public class RiskYoneticisi
 
 
 
+    public static int SabahCoskusuDegerlendir(dynamic Sistem, Hisse hisse)
+    {
+        double bist100Yuzde = IdealManager.Bist100EndeksYuzde(Sistem);
+        double bist30Yuzde = IdealManager.Bist30EndeksYuzde(Sistem);
+        double viop30Yuzde = IdealManager.Viop30EndeksYuzde(Sistem);
+        double hisseYuzde = IdealManager.HisseYuzde(Sistem, hisse.HisseAdi);
+        int rtn = 0;
+
+        //try
+        //{
+        if (bist100Yuzde > 0 && bist30Yuzde > 0 && viop30Yuzde > 0 && hisseYuzde > 0)
+            rtn = 1;
+
+        return rtn;
+
+    }
+
+
 }
