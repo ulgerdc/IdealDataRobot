@@ -130,5 +130,11 @@ public class RiskYoneticisi
 
     }
 
+    public static int ArbitrajDegerlendir(dynamic Sistem, string hisseAdi)
+    {
+        int rtn = 1;
+        return rtn;
+    }
+
 
 }

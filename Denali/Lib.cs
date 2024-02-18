@@ -125,5 +125,10 @@ public class Lib
     {
         TestStrateji.Baslat(Sistem, hisseAdi);
     }
+
+    public void ArbitrajStratejiBaslat(dynamic Sistem)
+    {
+        ArbitrajStrateji.Baslat(Sistem);
+    }
 }
 

@@ -39,12 +39,15 @@
     <Reference Include="System.Net.Http" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Arbitraj.cs" />
+    <Compile Include="ArbitrajHareket.cs" />
     <Compile Include="SabahCoskusuHareket.cs" />
     <Compile Include="HisseEmir.cs" />
     <Compile Include="HisseEmirDurum.cs" />
     <Compile Include="Lib.cs" />
     <Compile Include="DatabaseManager.cs" />
     <Compile Include="IdealManager.cs" />
+    <Compile Include="ArbitrajStrateji.cs" />
     <Compile Include="SabahCoskusuStrateji.cs" />
     <Compile Include="TestStrateji.cs" />
     <Compile Include="ManuelAnalizStrateji.cs" />

@@ -2,6 +2,7 @@
 public class IdealManager
 {
     static string hisseOrtam = "IMKBH'";
+    static string viopOrtam = "VIP'";
     static string bist100 = "IMKBX'XU100";
     static string bist30 = "IMKBX'XU030";
     static string viop30 = "VIP'VIP-X030";
@@ -53,6 +54,36 @@ public class IdealManager
             return 0.05D;
 
         return System.Math.Round(Sistem.AlisFiyat(hisseOrtam + hisse), 2);
+
+    }
+
+    //piyasa satis fiyati bizim alis fiyatimiz
+    public static double ViopAlisFiyatiGetir(dynamic Sistem, string hisse)
+    {
+        if (Sistem == null)
+            return 0.05D;
+
+        //VIP'F_ASELS0224
+
+        string viopHisseAdi = ViopHisseAdiGetir(hisse);
+
+        return System.Math.Round(Sistem.SatisFiyat(viopHisseAdi), 2);
+
+    }
+
+    private static string ViopHisseAdiGetir(string hisse)
+    {
+        return viopOrtam + "F_" + hisse + System.DateTime.Now.Month.ToString("d2") + System.DateTime.Now.Year.ToString();
+    }
+
+    //piyasa alis fiyati bizim alis fiyatimiz
+    public static double ViopSatisFiyatiGetir(dynamic Sistem, string hisse)
+    {
+        if (Sistem == null)
+            return 0.05D;
+
+        string viopHisseAdi = ViopHisseAdiGetir(hisse);
+        return System.Math.Round(Sistem.AlisFiyat(viopHisseAdi), 2);
 
     }
 
@@ -145,12 +176,45 @@ public class IdealManager
 
     }
 
+    public static void ViopAl(dynamic Sistem, string hisseAdi, int lot, double fiyat)
+    {
+
+        Sistem.EmirSembol = ViopHisseAdiGetir(hisseAdi);
+        Sistem.EmirIslem = "ALIS";
+        Sistem.EmirSuresi = "GUN"; // SEANS, GUN
+        Sistem.EmirTipi = "Limitli"; // NORMAL, KIE, KPY, AFE/KAFE
+        Sistem.EmirSatisTipi = "NORMAL"; // imkb (NORMAL, ACIGA, VIRMANDAN)
+        Sistem.EmirMiktari = lot;
+        Sistem.EmirFiyati = fiyat; //veya Piyasa
+
+        Sistem.EmirGonder();
+
+        Sistem.PozisyonKontrolGuncelle(Sistem.EmirSembol, lot);
+        //Sistem.PozisyonKontrolOku(Sistem.EmirSembol);
+
+
+    }
+
     public static void Sat(dynamic Sistem, string hisseAdi, int lot, double fiyat)
     {
         Sistem.EmirSembol = "IMKBH'" + hisseAdi;
         Sistem.EmirIslem = "SATIS";
         Sistem.EmirSuresi = "GUN";
         Sistem.EmirTipi = "Limit";
+        Sistem.EmirSatisTipi = "NORMAL";
+        Sistem.EmirMiktari = lot;
+        Sistem.EmirFiyati = fiyat;
+        Sistem.EmirGonder();
+
+        Sistem.PozisyonKontrolGuncelle(Sistem.EmirSembol, lot);
+    }
+
+    public static void ViopSat(dynamic Sistem, string hisseAdi, int lot, double fiyat)
+    {
+        Sistem.EmirSembol = ViopHisseAdiGetir(hisseAdi);
+        Sistem.EmirIslem = "SATIS";
+        Sistem.EmirSuresi = "GUN";
+        Sistem.EmirTipi = "Limitli";
         Sistem.EmirSatisTipi = "NORMAL";
         Sistem.EmirMiktari = lot;
         Sistem.EmirFiyati = fiyat;
@@ -273,5 +337,14 @@ public class IdealManager
         double percentage = (numerator / denominator) * 100;
 
         return percentage;
+    }
+
+    public static double YuzdeFarkiHesapla(double sayi1, double sayi2)
+    {
+      
+        double fark = sayi1 - sayi2;
+        double yuzdeFark = (fark / sayi2) * 100;
+
+        return yuzdeFark;
     }
 }

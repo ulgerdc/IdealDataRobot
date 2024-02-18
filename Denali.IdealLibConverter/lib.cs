@@ -1,4 +1,125 @@
 namespace ideal {
+public class Arbitraj
+{
+    public long Id { get; set; }
+    private string hisseAdi;
+    public string HisseAdi
+    {
+        get
+        {
+            return hisseAdi;
+        }
+        set
+        {
+            hisseAdi = value;
+        }
+    }
+
+    public int ViopLot { get; set; }
+
+    public int BistLot { get; set; }
+
+    public int Marj { get; set; }
+
+    public bool AktifMi { get; set; }
+
+}
+
+public class ArbitrajHareket
+{
+    public long Id { get; set; }
+
+    public string RobotAdi { get; internal set; }
+    public string HisseAdi { get; internal set; }
+    public double ViopSatisFiyati { get; internal set; }
+    public double ViopAlisFiyati { get; internal set; }
+    public int ViopLot { get; set; }
+    public double BistAlisFiyati { get; internal set; }
+    public double BistSatisFiyati { get; internal set; }
+    public int BistLot { get; set; }
+    public double Kar { get; internal set; }
+    public System.DateTime PozisyonTarih { get; internal set; }
+    public System.DateTime KapanisTarihi { get; internal set; }
+    public bool AktifMi { get; internal set; }
+
+}
+
+public class ArbitrajStrateji
+{
+    public static void Baslat(dynamic Sistem)
+    {
+        Sistem.Debug("Basladik" + Sistem.Name);
+
+        Sistem.AlgoIslem = "OK";
+        if (Sistem.BaglantiVar == false)
+        {
+            Sistem.Debug("Baglanti Yok");
+            return;
+        }
+
+        if (IdealManager.SaatiKontrolEt(Sistem) == true)
+        {
+            Sistem.Debug("Saat Uygun Degil");
+            return;
+        }
+
+        var hisseList = DatabaseManager.ArbitrajGetir();
+
+        foreach (var hisse in hisseList)
+        {
+           
+            double bistSatisFiyati = IdealManager.AlisFiyatiGetir(Sistem, hisse.HisseAdi);
+            double viopAlisFiyati = IdealManager.ViopAlisFiyatiGetir(Sistem, hisse.HisseAdi);
+
+
+            if (bistSatisFiyati == 0 || viopAlisFiyati == 0)
+                continue;
+
+            var arbitrajHareket = DatabaseManager.ArbitrajKontrol(hisse.HisseAdi);
+            if (arbitrajHareket != null && bistSatisFiyati >= viopAlisFiyati)
+            {
+                IdealManager.ViopAl(Sistem, hisse.HisseAdi, hisse.ViopLot, viopAlisFiyati);
+                IdealManager.Sat(Sistem, hisse.HisseAdi, hisse.BistLot, bistSatisFiyati);
+                arbitrajHareket.ViopAlisFiyati = viopAlisFiyati;
+                arbitrajHareket.BistSatisFiyati = bistSatisFiyati;
+                DatabaseManager.ArbitrajHareketGuncelle(arbitrajHareket);
+            }
+
+            double bistAlisFiyati = IdealManager.AlisFiyatiGetir(Sistem, hisse.HisseAdi);
+            double viopSatisFiyati = IdealManager.ViopSatisFiyatiGetir(Sistem, hisse.HisseAdi);
+
+            if (bistAlisFiyati == 0 || viopSatisFiyati == 0)
+                continue;
+            var yuzde = IdealManager.YuzdeFarkiHesapla(viopSatisFiyati, bistAlisFiyati);
+
+            if (yuzde >= hisse.Marj)
+            {
+            
+                if (RiskYoneticisi.ArbitrajDegerlendir(Sistem, hisse.HisseAdi) == 1)
+                {
+                    IdealManager.ViopSat(Sistem, hisse.HisseAdi, hisse.ViopLot, viopSatisFiyati);
+                    IdealManager.Al(Sistem, hisse.HisseAdi, hisse.BistLot, bistAlisFiyati);
+                    var pozisyonAl = new ArbitrajHareket();
+                    pozisyonAl.ViopSatisFiyati = viopSatisFiyati;
+                    pozisyonAl.BistAlisFiyati = bistAlisFiyati;
+                    pozisyonAl.HisseAdi = hisse.HisseAdi;
+                    pozisyonAl.BistLot = hisse.BistLot;
+                    pozisyonAl.ViopLot = hisse.ViopLot;
+                    pozisyonAl.RobotAdi = Sistem.Name;
+                    pozisyonAl.PozisyonTarih = System.DateTime.Now;
+
+                    DatabaseManager.ArbitrajHareketGuncelle(pozisyonAl);
+                }               
+            }
+
+       
+        }
+    }
+
+
+}
+
+
 
 public class DatabaseManager
 {
@@ -314,6 +435,84 @@ public class DatabaseManager
 
     }
 
+    public static System.Collections.Generic.List<Arbitraj> ArbitrajGetir()
+    {
+
+        var list = new System.Collections.Generic.List<Arbitraj>();
+
+        using (System.Data.SqlClient.SqlConnection connection = new System.Data.SqlClient.SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+
+            cmd.CommandText = "[dbo].[sel_arbitraj]";
+
+            using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    Arbitraj map = MapFromDataReader<Arbitraj>(reader);
+                    list.Add(map);
+                }
+            }
+        }
+
+        return list;
+
+    }
+
+    public static ArbitrajHareket ArbitrajKontrol(string hisseAdi)
+    {
+        ArbitrajHareket arbitrajHareket = null;
+
+        using (System.Data.SqlClient.SqlConnection connection = new System.Data.SqlClient.SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+            cmd.CommandText = "[dbo].[sel_arbitrajkontrol]";
+            cmd.Parameters.AddWithValue("@HisseAdi", hisseAdi);
+
+            using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    arbitrajHareket = MapFromDataReader<ArbitrajHareket>(reader);
+                }
+            }
+        }
+
+        return arbitrajHareket;
+
+    }
+
+    public static void ArbitrajHareketGuncelle(ArbitrajHareket hareket)
+    {
+        var conn = OpenConnection();
+
+        System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
+        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+        cmd.Connection = conn;
+        cmd.CommandText = "[dbo].[ins_arbitrajhareket]";
+
+        cmd.Parameters.AddWithValue("@Id", hareket.Id);
+        cmd.Parameters.AddWithValue("@RobotAdi", hareket.RobotAdi);
+        cmd.Parameters.AddWithValue("@HisseAdi", hareket.HisseAdi);
+        cmd.Parameters.AddWithValue("@ViopSatisFiyati", hareket.ViopSatisFiyati);
+        cmd.Parameters.AddWithValue("@ViopAlisFiyati", hareket.ViopAlisFiyati);
+        cmd.Parameters.AddWithValue("@ViopLot", hareket.ViopLot);
+        cmd.Parameters.AddWithValue("@BistSatisFiyati", hareket.BistSatisFiyati);
+        cmd.Parameters.AddWithValue("@BistAlisFiyati", hareket.BistAlisFiyati);
+        cmd.Parameters.AddWithValue("@BistLot", hareket.BistLot);
+
+        cmd.ExecuteNonQuery();
+        cmd.Connection.Close();
+
+    }
+
     static T MapFromDataReader<T>(System.Data.SqlClient.SqlDataReader reader) where T : new()
     {
         T instance = new T();
@@ -427,6 +626,7 @@ public class HissePozisyonlari
 public class IdealManager
 {
     static string hisseOrtam = "IMKBH'";
+    static string viopOrtam = "VIP'";
     static string bist100 = "IMKBX'XU100";
     static string bist30 = "IMKBX'XU030";
     static string viop30 = "VIP'VIP-X030";
@@ -478,6 +678,36 @@ public class IdealManager
             return 0.05D;
 
         return System.Math.Round(Sistem.AlisFiyat(hisseOrtam + hisse), 2);
+
+    }
+
+    //piyasa satis fiyati bizim alis fiyatimiz
+    public static double ViopAlisFiyatiGetir(dynamic Sistem, string hisse)
+    {
+        if (Sistem == null)
+            return 0.05D;
+
+        //VIP'F_ASELS0224
+
+        string viopHisseAdi = ViopHisseAdiGetir(hisse);
+
+        return System.Math.Round(Sistem.SatisFiyat(viopHisseAdi), 2);
+
+    }
+
+    private static string ViopHisseAdiGetir(string hisse)
+    {
+        return viopOrtam + "F_" + hisse + System.DateTime.Now.Month.ToString("d2") + System.DateTime.Now.Year.ToString();
+    }
+
+    //piyasa alis fiyati bizim alis fiyatimiz
+    public static double ViopSatisFiyatiGetir(dynamic Sistem, string hisse)
+    {
+        if (Sistem == null)
+            return 0.05D;
+
+        string viopHisseAdi = ViopHisseAdiGetir(hisse);
+        return System.Math.Round(Sistem.AlisFiyat(viopHisseAdi), 2);
 
     }
 
@@ -570,12 +800,45 @@ public class IdealManager
 
     }
 
+    public static void ViopAl(dynamic Sistem, string hisseAdi, int lot, double fiyat)
+    {
+
+        Sistem.EmirSembol = ViopHisseAdiGetir(hisseAdi);
+        Sistem.EmirIslem = "ALIS";
+        Sistem.EmirSuresi = "GUN"; // SEANS, GUN
+        Sistem.EmirTipi = "Limitli"; // NORMAL, KIE, KPY, AFE/KAFE
+        Sistem.EmirSatisTipi = "NORMAL"; // imkb (NORMAL, ACIGA, VIRMANDAN)
+        Sistem.EmirMiktari = lot;
+        Sistem.EmirFiyati = fiyat; //veya Piyasa
+
+        Sistem.EmirGonder();
+
+        Sistem.PozisyonKontrolGuncelle(Sistem.EmirSembol, lot);
+        //Sistem.PozisyonKontrolOku(Sistem.EmirSembol);
+
+
+    }
+
     public static void Sat(dynamic Sistem, string hisseAdi, int lot, double fiyat)
     {
         Sistem.EmirSembol = "IMKBH'" + hisseAdi;
         Sistem.EmirIslem = "SATIS";
         Sistem.EmirSuresi = "GUN";
         Sistem.EmirTipi = "Limit";
+        Sistem.EmirSatisTipi = "NORMAL";
+        Sistem.EmirMiktari = lot;
+        Sistem.EmirFiyati = fiyat;
+        Sistem.EmirGonder();
+
+        Sistem.PozisyonKontrolGuncelle(Sistem.EmirSembol, lot);
+    }
+
+    public static void ViopSat(dynamic Sistem, string hisseAdi, int lot, double fiyat)
+    {
+        Sistem.EmirSembol = ViopHisseAdiGetir(hisseAdi);
+        Sistem.EmirIslem = "SATIS";
+        Sistem.EmirSuresi = "GUN";
+        Sistem.EmirTipi = "Limitli";
         Sistem.EmirSatisTipi = "NORMAL";
         Sistem.EmirMiktari = lot;
         Sistem.EmirFiyati = fiyat;
@@ -698,6 +961,15 @@ public class IdealManager
         double percentage = (numerator / denominator) * 100;
 
         return percentage;
+    }
+
+    public static double YuzdeFarkiHesapla(double sayi1, double sayi2)
+    {
+      
+        double fark = sayi1 - sayi2;
+        double yuzdeFark = (fark / sayi2) * 100;
+
+        return yuzdeFark;
     }
 }
 
@@ -826,6 +1098,11 @@ public class Lib
     public void TestStratejiBaslat(dynamic Sistem, string hisseAdi)
     {
         TestStrateji.Baslat(Sistem, hisseAdi);
+    }
+
+    public void ArbitrajStratejiBaslat(dynamic Sistem)
+    {
+        ArbitrajStrateji.Baslat(Sistem);
     }
 }
 
@@ -1028,6 +1305,12 @@ public class RiskYoneticisi
 
         return rtn;
 
+    }
+
+    public static int ArbitrajDegerlendir(dynamic Sistem, string hisseAdi)
+    {
+        int rtn = 1;
+        return rtn;
     }
 
 

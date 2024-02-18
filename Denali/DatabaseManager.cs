@@ -314,6 +314,84 @@ public class DatabaseManager
 
     }
 
+    public static System.Collections.Generic.List<Arbitraj> ArbitrajGetir()
+    {
+
+        var list = new System.Collections.Generic.List<Arbitraj>();
+
+        using (System.Data.SqlClient.SqlConnection connection = new System.Data.SqlClient.SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+
+            cmd.CommandText = "[dbo].[sel_arbitraj]";
+
+            using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    Arbitraj map = MapFromDataReader<Arbitraj>(reader);
+                    list.Add(map);
+                }
+            }
+        }
+
+        return list;
+
+    }
+
+    public static ArbitrajHareket ArbitrajKontrol(string hisseAdi)
+    {
+        ArbitrajHareket arbitrajHareket = null;
+
+        using (System.Data.SqlClient.SqlConnection connection = new System.Data.SqlClient.SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+            cmd.CommandText = "[dbo].[sel_arbitrajkontrol]";
+            cmd.Parameters.AddWithValue("@HisseAdi", hisseAdi);
+
+            using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    arbitrajHareket = MapFromDataReader<ArbitrajHareket>(reader);
+                }
+            }
+        }
+
+        return arbitrajHareket;
+
+    }
+
+    public static void ArbitrajHareketGuncelle(ArbitrajHareket hareket)
+    {
+        var conn = OpenConnection();
+
+        System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
+        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+        cmd.Connection = conn;
+        cmd.CommandText = "[dbo].[ins_arbitrajhareket]";
+
+        cmd.Parameters.AddWithValue("@Id", hareket.Id);
+        cmd.Parameters.AddWithValue("@RobotAdi", hareket.RobotAdi);
+        cmd.Parameters.AddWithValue("@HisseAdi", hareket.HisseAdi);
+        cmd.Parameters.AddWithValue("@ViopSatisFiyati", hareket.ViopSatisFiyati);
+        cmd.Parameters.AddWithValue("@ViopAlisFiyati", hareket.ViopAlisFiyati);
+        cmd.Parameters.AddWithValue("@ViopLot", hareket.ViopLot);
+        cmd.Parameters.AddWithValue("@BistSatisFiyati", hareket.BistSatisFiyati);
+        cmd.Parameters.AddWithValue("@BistAlisFiyati", hareket.BistAlisFiyati);
+        cmd.Parameters.AddWithValue("@BistLot", hareket.BistLot);
+
+        cmd.ExecuteNonQuery();
+        cmd.Connection.Close();
+
+    }
+
     static T MapFromDataReader<T>(System.Data.SqlClient.SqlDataReader reader) where T : new()
     {
         T instance = new T();
