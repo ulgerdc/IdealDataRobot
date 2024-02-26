@@ -3,18 +3,18 @@ public class ManuelAnalizStrateji
 {
     public static void Baslat(dynamic Sistem)
     {
-        Sistem.Debug("Basladik" + Sistem.Name);
+        //Sistem.Debug("Basladik" + Sistem.Name);
 
         Sistem.AlgoIslem = "OK";
         if (Sistem.BaglantiVar == false)
         {
-            Sistem.Debug("Baglanti Yok");
+            //Sistem.Debug("Baglanti Yok");
             return;
         }
 
         if (IdealManager.SaatiKontrolEt(Sistem) == true)
         {
-            Sistem.Debug("Saat Uygun Degil");
+            //Sistem.Debug("Saat Uygun Degil");
             return;
         }
 

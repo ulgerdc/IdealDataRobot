@@ -9,7 +9,7 @@ public class Lib
             Sistem.AlgoIslem = "OK";
             if (Sistem.BaglantiVar == false)
             {
-                Sistem.Debug("Baglanti Yok");
+                //Sistem.Debug("Baglanti Yok");
                 return;
             }
 
@@ -40,7 +40,7 @@ public class Lib
                 hisse = DatabaseManager.HisseGetir("Default");
                 if (hisse == null)
                 {
-                    Sistem.Debug(string.Format("Hisse Tablosunda {0} Bulunamadi", hisseAdi));
+                    //Sistem.Debug(string.Format("Hisse Tablosunda {0} Bulunamadi", hisseAdi));
                     return;
                 }
                 hisse.HisseAdi = hisseAdi;
@@ -73,7 +73,7 @@ public class Lib
                 }
                 else
                 {
-                    Sistem.Debug(string.Format("{0} {1} satis icin uygun degil", hisseAdi, satisFiyati));
+                    //Sistem.Debug(string.Format("{0} {1} satis icin uygun degil", hisseAdi, satisFiyati));
                 }
             }
 
@@ -104,7 +104,7 @@ public class Lib
                     }
                     else
                     {
-                        Sistem.Debug(string.Format("{0} {1} alis icin uygun degil", hisseAdi, alisFiyati));
+                        //Sistem.Debug(string.Format("{0} {1} alis icin uygun degil", hisseAdi, alisFiyati));
                     }
                 }
                

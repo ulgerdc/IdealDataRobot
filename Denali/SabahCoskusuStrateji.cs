@@ -3,18 +3,18 @@ public class SabahCoskusuStrateji
 {
     public static void Baslat(dynamic Sistem)
     {
-        Sistem.Debug("Basladik" + Sistem.Name);
+        //Sistem.Debug("Basladik" + Sistem.Name);
 
         Sistem.AlgoIslem = "OK";
         if (Sistem.BaglantiVar == false)
         {
-            Sistem.Debug("Baglanti Yok");
+            //Sistem.Debug("Baglanti Yok");
             return;
         }
 
         if (IdealManager.SabahCoskusuAlimSaatiKontrolEt(Sistem) == true)
         {
-            Sistem.Debug("Saat Uygun Degil");
+            //Sistem.Debug("Saat Uygun Degil");
             return;
         }
 
@@ -52,7 +52,7 @@ public class SabahCoskusuStrateji
                 }
                 else
                 {
-                    Sistem.Debug(string.Format("{0} {1} alis icin uygun degil", hisse.HisseAdi, alisFiyati));
+                    //Sistem.Debug(string.Format("{0} {1} alis icin uygun degil", hisse.HisseAdi, alisFiyati));
                 }
 
             }

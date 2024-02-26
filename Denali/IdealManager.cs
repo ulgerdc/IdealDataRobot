@@ -67,13 +67,15 @@ public class IdealManager
 
         string viopHisseAdi = ViopHisseAdiGetir(hisse);
 
+        Sistem.Debug(viopHisseAdi);
+
         return System.Math.Round(Sistem.SatisFiyat(viopHisseAdi), 2);
 
     }
 
     private static string ViopHisseAdiGetir(string hisse)
     {
-        return viopOrtam + "F_" + hisse + System.DateTime.Now.Month.ToString("d2") + System.DateTime.Now.Year.ToString();
+        return viopOrtam + "F_" + hisse + System.DateTime.Now.Month.ToString("d2") + System.DateTime.Now.ToString("yy");
     }
 
     //piyasa alis fiyati bizim alis fiyatimiz

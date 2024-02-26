@@ -44,46 +44,60 @@ public class ArbitrajHareket
 
 }
 
+
 public class ArbitrajStrateji
 {
     public static void Baslat(dynamic Sistem)
     {
-        Sistem.Debug("Basladik" + Sistem.Name);
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        
+        //Sistem.Debug("Basladik" + Sistem.Name);
 
         Sistem.AlgoIslem = "OK";
         if (Sistem.BaglantiVar == false)
         {
-            Sistem.Debug("Baglanti Yok");
+            //Sistem.Debug("Baglanti Yok");
             return;
         }
 
         if (IdealManager.SaatiKontrolEt(Sistem) == true)
         {
-            Sistem.Debug("Saat Uygun Degil");
+            //Sistem.Debug("Saat Uygun Degil");
             return;
         }
 
         var hisseList = DatabaseManager.ArbitrajGetir();
-
+        sb.AppendLine(hisseList.Count.ToString());
         foreach (var hisse in hisseList)
         {
-           
+            //sb.Append(hisse.HisseAdi);
+
             double bistSatisFiyati = IdealManager.AlisFiyatiGetir(Sistem, hisse.HisseAdi);
             double viopAlisFiyati = IdealManager.ViopAlisFiyatiGetir(Sistem, hisse.HisseAdi);
 
+          
 
             if (bistSatisFiyati == 0 || viopAlisFiyati == 0)
                 continue;
 
             var arbitrajHareket = DatabaseManager.ArbitrajKontrol(hisse.HisseAdi);
-            if (arbitrajHareket != null && bistSatisFiyati >= viopAlisFiyati)
+            if (arbitrajHareket != null)
             {
-                IdealManager.ViopAl(Sistem, hisse.HisseAdi, hisse.ViopLot, viopAlisFiyati);
-                IdealManager.Sat(Sistem, hisse.HisseAdi, hisse.BistLot, bistSatisFiyati);
-                arbitrajHareket.ViopAlisFiyati = viopAlisFiyati;
-                arbitrajHareket.BistSatisFiyati = bistSatisFiyati;
-                DatabaseManager.ArbitrajHareketGuncelle(arbitrajHareket);
+                sb.AppendLine("bist =" + bistSatisFiyati + "viop " +  viopAlisFiyati);
+
+                if (bistSatisFiyati >= viopAlisFiyati)
+                {
+                    IdealManager.ViopAl(Sistem, hisse.HisseAdi, hisse.ViopLot, viopAlisFiyati);
+                    IdealManager.Sat(Sistem, hisse.HisseAdi, hisse.BistLot, bistSatisFiyati);
+                    arbitrajHareket.ViopAlisFiyati = viopAlisFiyati;
+                    arbitrajHareket.BistSatisFiyati = bistSatisFiyati;
+                    DatabaseManager.ArbitrajHareketGuncelle(arbitrajHareket);
+                }
+                Sistem.Mesaj(sb.ToString());
+                continue;//yeni pozisyon acma
             }
+
+            //sb.AppendLine("2");
 
             double bistAlisFiyati = IdealManager.AlisFiyatiGetir(Sistem, hisse.HisseAdi);
             double viopSatisFiyati = IdealManager.ViopSatisFiyatiGetir(Sistem, hisse.HisseAdi);
@@ -92,11 +106,14 @@ public class ArbitrajStrateji
                 continue;
             var yuzde = IdealManager.YuzdeFarkiHesapla(viopSatisFiyati, bistAlisFiyati);
 
+            sb.AppendLine(hisse.HisseAdi + "#" + yuzde.ToString() + "#" + bistSatisFiyati.ToString() + "#" + viopAlisFiyati.ToString());
+
             if (yuzde >= hisse.Marj)
             {
-            
+               
                 if (RiskYoneticisi.ArbitrajDegerlendir(Sistem, hisse.HisseAdi) == 1)
                 {
+                    //Sistem.Mesaj("5");
                     IdealManager.ViopSat(Sistem, hisse.HisseAdi, hisse.ViopLot, viopSatisFiyati);
                     IdealManager.Al(Sistem, hisse.HisseAdi, hisse.BistLot, bistAlisFiyati);
                     var pozisyonAl = new ArbitrajHareket();
@@ -109,10 +126,16 @@ public class ArbitrajStrateji
                     pozisyonAl.PozisyonTarih = System.DateTime.Now;
 
                     DatabaseManager.ArbitrajHareketGuncelle(pozisyonAl);
-                }               
+
+                    //sb.AppendLine("6");
+                }
+            }
+            else 
+            {
+                //sb.AppendLine("7 " + yuzde.ToString() + " " + hisse.Marj);
             }
 
-       
+            Sistem.Mesaj(sb.ToString());
         }
     }
 
@@ -691,13 +714,15 @@ public class IdealManager
 
         string viopHisseAdi = ViopHisseAdiGetir(hisse);
 
+        Sistem.Debug(viopHisseAdi);
+
         return System.Math.Round(Sistem.SatisFiyat(viopHisseAdi), 2);
 
     }
 
     private static string ViopHisseAdiGetir(string hisse)
     {
-        return viopOrtam + "F_" + hisse + System.DateTime.Now.Month.ToString("d2") + System.DateTime.Now.Year.ToString();
+        return viopOrtam + "F_" + hisse + System.DateTime.Now.Month.ToString("d2") + System.DateTime.Now.ToString("yy");
     }
 
     //piyasa alis fiyati bizim alis fiyatimiz
@@ -983,7 +1008,7 @@ public class Lib
             Sistem.AlgoIslem = "OK";
             if (Sistem.BaglantiVar == false)
             {
-                Sistem.Debug("Baglanti Yok");
+                //Sistem.Debug("Baglanti Yok");
                 return;
             }
 
@@ -1014,7 +1039,7 @@ public class Lib
                 hisse = DatabaseManager.HisseGetir("Default");
                 if (hisse == null)
                 {
-                    Sistem.Debug(string.Format("Hisse Tablosunda {0} Bulunamadi", hisseAdi));
+                    //Sistem.Debug(string.Format("Hisse Tablosunda {0} Bulunamadi", hisseAdi));
                     return;
                 }
                 hisse.HisseAdi = hisseAdi;
@@ -1047,7 +1072,7 @@ public class Lib
                 }
                 else
                 {
-                    Sistem.Debug(string.Format("{0} {1} satis icin uygun degil", hisseAdi, satisFiyati));
+                    //Sistem.Debug(string.Format("{0} {1} satis icin uygun degil", hisseAdi, satisFiyati));
                 }
             }
 
@@ -1078,7 +1103,7 @@ public class Lib
                     }
                     else
                     {
-                        Sistem.Debug(string.Format("{0} {1} alis icin uygun degil", hisseAdi, alisFiyati));
+                        //Sistem.Debug(string.Format("{0} {1} alis icin uygun degil", hisseAdi, alisFiyati));
                     }
                 }
                
@@ -1112,18 +1137,18 @@ public class ManuelAnalizStrateji
 {
     public static void Baslat(dynamic Sistem)
     {
-        Sistem.Debug("Basladik" + Sistem.Name);
+        //Sistem.Debug("Basladik" + Sistem.Name);
 
         Sistem.AlgoIslem = "OK";
         if (Sistem.BaglantiVar == false)
         {
-            Sistem.Debug("Baglanti Yok");
+            //Sistem.Debug("Baglanti Yok");
             return;
         }
 
         if (IdealManager.SaatiKontrolEt(Sistem) == true)
         {
-            Sistem.Debug("Saat Uygun Degil");
+            //Sistem.Debug("Saat Uygun Degil");
             return;
         }
 
@@ -1329,18 +1354,18 @@ public class SabahCoskusuStrateji
 {
     public static void Baslat(dynamic Sistem)
     {
-        Sistem.Debug("Basladik" + Sistem.Name);
+        //Sistem.Debug("Basladik" + Sistem.Name);
 
         Sistem.AlgoIslem = "OK";
         if (Sistem.BaglantiVar == false)
         {
-            Sistem.Debug("Baglanti Yok");
+            //Sistem.Debug("Baglanti Yok");
             return;
         }
 
         if (IdealManager.SabahCoskusuAlimSaatiKontrolEt(Sistem) == true)
         {
-            Sistem.Debug("Saat Uygun Degil");
+            //Sistem.Debug("Saat Uygun Degil");
             return;
         }
 
@@ -1378,7 +1403,7 @@ public class SabahCoskusuStrateji
                 }
                 else
                 {
-                    Sistem.Debug(string.Format("{0} {1} alis icin uygun degil", hisse.HisseAdi, alisFiyati));
+                    //Sistem.Debug(string.Format("{0} {1} alis icin uygun degil", hisse.HisseAdi, alisFiyati));
                 }
 
             }
@@ -1393,15 +1418,15 @@ public class TestStrateji
 {
     public static void Baslat(dynamic Sistem, string hisseAdi)
     {
-        Sistem.Debug("adadasdsada");
+        //Sistem.Debug("adadasdsada");
 
         var hisse = DatabaseManager.HisseGetir(hisseAdi);
         double yuksekGun = IdealManager.YuksekGunGetir(Sistem, "AKBNK");
-        Sistem.Debug(yuksekGun.ToString());
+        //Sistem.Debug(yuksekGun.ToString());
         RiskYoneticisi.RiskHesapla(Sistem, hisse,40.90D,0.16D);
         RiskYoneticisi.EndeksDegerlendir(Sistem, hisse);
 
-        Sistem.Debug("adadasdsada");
+        //Sistem.Debug("adadasdsada");
     }
 }
 
