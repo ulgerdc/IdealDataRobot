@@ -1,16 +1,13 @@
 ﻿
-public class HisseAdiYuzde
+
+public class BesSekizOnucStrateji
 {
-    public string HisseAdi { get; set; }
-    public double Yuzde { get; set; }
-}
-public class ArbitrajStrateji
-{
+
+    //hepsi cross yapmis ve fiyat hepsinin altinda olanlar.
     public static void Baslat(dynamic Sistem)
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-
-        var list = new System.Collections.Generic.List<HisseAdiYuzde>();
+        
         //Sistem.Debug("Basladik" + Sistem.Name);
 
         Sistem.AlgoIslem = "OK";
@@ -20,14 +17,14 @@ public class ArbitrajStrateji
             return;
         }
 
-        if (IdealManager.ArbitrajSaatiKontrolEt(Sistem) == true)
+        if (IdealManager.SaatiKontrolEt(Sistem) == true)
         {
             //Sistem.Debug("Saat Uygun Degil");
             return;
         }
 
         var hisseList = DatabaseManager.ArbitrajGetir();
-        //sb.AppendLine(hisseList.Count.ToString());
+        sb.AppendLine(hisseList.Count.ToString());
         foreach (var hisse in hisseList)
         {
             //sb.Append(hisse.HisseAdi);
@@ -43,7 +40,7 @@ public class ArbitrajStrateji
             var arbitrajHareket = DatabaseManager.ArbitrajKontrol(hisse.HisseAdi);
             if (arbitrajHareket != null)
             {
-               // sb.AppendLine("bist =" + bistSatisFiyati + "viop " +  viopAlisFiyati);
+                sb.AppendLine("bist =" + bistSatisFiyati + "viop " +  viopAlisFiyati);
 
                 if (bistSatisFiyati >= viopAlisFiyati)
                 {
@@ -53,7 +50,7 @@ public class ArbitrajStrateji
                     arbitrajHareket.BistSatisFiyati = bistSatisFiyati;
                     DatabaseManager.ArbitrajHareketGuncelle(arbitrajHareket);
                 }
-                //Sistem.Mesaj(sb.ToString());
+                Sistem.Mesaj(sb.ToString());
                 continue;//yeni pozisyon acma
             }
 
@@ -66,8 +63,7 @@ public class ArbitrajStrateji
                 continue;
             var yuzde = IdealManager.YuzdeFarkiHesapla(viopSatisFiyati, bistAlisFiyati);
 
-            //sb.AppendLine(hisse.HisseAdi + "#" + yuzde.ToString() + "#" + bistSatisFiyati.ToString() + "#" + viopAlisFiyati.ToString());
-            list.Add(new HisseAdiYuzde { HisseAdi = hisse.HisseAdi, Yuzde = yuzde });
+            sb.AppendLine(hisse.HisseAdi + "#" + yuzde.ToString() + "#" + bistSatisFiyati.ToString() + "#" + viopAlisFiyati.ToString());
 
             if (yuzde >= hisse.Marj)
             {
@@ -96,19 +92,8 @@ public class ArbitrajStrateji
                 //sb.AppendLine("7 " + yuzde.ToString() + " " + hisse.Marj);
             }
 
-           
+            Sistem.Mesaj(sb.ToString());
         }
-
-        System.Func<HisseAdiYuzde, double> keySelector = item => item.Yuzde;
-        list.Sort((a, b) => keySelector(a).CompareTo(keySelector(b)));
-
-        foreach (var item in list)
-        {
-
-            sb.AppendLine(item.HisseAdi + "==>" + item.Yuzde.ToString());
-        }
-
-        Sistem.Mesaj(sb.ToString());
     }
 
 

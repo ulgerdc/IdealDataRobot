@@ -6,6 +6,11 @@ public class IdealManager
     static string bist100 = "IMKBX'XU100";
     static string bist30 = "IMKBX'XU030";
     static string viop30 = "VIP'VIP-X030";
+
+    public static bool ArbitrajSaatiKontrolEt(dynamic Sistem)
+    {
+        return (Sistem.Saat.CompareTo("10:05:00") <= 0 || Sistem.Saat.CompareTo("17:59:59") >= 0);
+    }
     public static bool SaatiKontrolEt(dynamic Sistem)
     {
         return (Sistem.Saat.CompareTo("10:00:00") <= 0 || Sistem.Saat.CompareTo("17:59:59") >= 0);

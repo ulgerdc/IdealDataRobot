@@ -12,7 +12,8 @@ namespace Denali.IdealLibConverter
         static void Main()
         {
             string sourceDirectory = @"C:\iko\robot\denali";
-            string outputFile = @"C:\iko\robot\Denali.IdealLibConverter\lib.cs";
+            //string outputFile = @"C:\iko\robot\Denali.IdealLibConverter\lib.cs";
+            string outputFile = @"C:\ideal\Lib.cs";
             string commonNamespace = "ideal";
 
             CombineClasses(sourceDirectory, outputFile, commonNamespace);

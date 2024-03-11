@@ -37,6 +37,22 @@ public class DatabaseManager
 
     }
 
+    public static void HisseGuncelle(Hisse hisse)
+    {
+        var conn = OpenConnection();
+
+        System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
+        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+        cmd.Connection = conn;
+        cmd.CommandText = "upd_hisse";
+
+        cmd.Parameters.AddWithValue("@Id", hisse.Id);
+        cmd.Parameters.AddWithValue("@PiyasaAlis", hisse.PiyasaAlis);
+        cmd.Parameters.AddWithValue("@PiyasaSatis", hisse.PiyasaSatis);
+        cmd.ExecuteNonQuery();
+        cmd.Connection.Close();
+
+    }
     public static HisseHareket HisseHareketGetir(string hisseAdi, double fiyat)
     {
         HisseHareket hisse = null;

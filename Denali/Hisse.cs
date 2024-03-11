@@ -27,4 +27,11 @@ public class Hisse
 
     public bool Aktif { get; set; }
 
+    public bool AlisAktif { get; set; }
+    public bool SatisAktif { get; set; }
+
+    public double PiyasaAlis { get; set; }
+
+    public double PiyasaSatis { get; set; }
+
 }

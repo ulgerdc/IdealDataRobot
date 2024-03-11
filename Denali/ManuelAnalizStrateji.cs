@@ -32,7 +32,7 @@ public class ManuelAnalizStrateji
                 IdealManager.Sat(Sistem, hisseEmir.HisseAdi, hisseEmir.Lot, satisFiyati);
                 hisseEmir.SatisTarihi = System.DateTime.Now;
                 hisseEmir.Durum = HisseEmirDurum.KarAlindi.ToString();
-                hisseEmir.Kar = System.Math.Round(satisFiyati - hisseEmir.AlisHedefi, 2);
+                hisseEmir.Kar = System.Math.Round(satisFiyati - hisseEmir.AlisHedefi, 2) * hisseEmir.Lot;
                 DatabaseManager.HisseEmirGuncelle(hisseEmir);
             }
 
@@ -41,7 +41,7 @@ public class ManuelAnalizStrateji
                 IdealManager.Sat(Sistem, hisseEmir.HisseAdi, hisseEmir.Lot, satisFiyati);
                 hisseEmir.SatisTarihi = System.DateTime.Now;
                 hisseEmir.Durum = HisseEmirDurum.StopOldu.ToString();
-                hisseEmir.Kar = System.Math.Round(satisFiyati - hisseEmir.AlisHedefi, 2);
+                hisseEmir.Kar = System.Math.Round(satisFiyati - hisseEmir.AlisHedefi, 2) * hisseEmir.Lot;
                 DatabaseManager.HisseEmirGuncelle(hisseEmir);
             }
         }

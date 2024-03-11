@@ -1,52 +1,9 @@
 namespace ideal {
-public class Arbitraj
+
+public class BesSekizOnucStrateji
 {
-    public long Id { get; set; }
-    private string hisseAdi;
-    public string HisseAdi
-    {
-        get
-        {
-            return hisseAdi;
-        }
-        set
-        {
-            hisseAdi = value;
-        }
-    }
 
-    public int ViopLot { get; set; }
-
-    public int BistLot { get; set; }
-
-    public int Marj { get; set; }
-
-    public bool AktifMi { get; set; }
-
-}
-
-public class ArbitrajHareket
-{
-    public long Id { get; set; }
-
-    public string RobotAdi { get; internal set; }
-    public string HisseAdi { get; internal set; }
-    public double ViopSatisFiyati { get; internal set; }
-    public double ViopAlisFiyati { get; internal set; }
-    public int ViopLot { get; set; }
-    public double BistAlisFiyati { get; internal set; }
-    public double BistSatisFiyati { get; internal set; }
-    public int BistLot { get; set; }
-    public double Kar { get; internal set; }
-    public System.DateTime PozisyonTarih { get; internal set; }
-    public System.DateTime KapanisTarihi { get; internal set; }
-    public bool AktifMi { get; internal set; }
-
-}
-
-
-public class ArbitrajStrateji
-{
+    //hepsi cross yapmis ve fiyat hepsinin altinda olanlar.
     public static void Baslat(dynamic Sistem)
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -143,6 +100,167 @@ public class ArbitrajStrateji
 }
 
 
+public class Arbitraj
+{
+    public long Id { get; set; }
+    private string hisseAdi;
+    public string HisseAdi
+    {
+        get
+        {
+            return hisseAdi;
+        }
+        set
+        {
+            hisseAdi = value;
+        }
+    }
+
+    public int ViopLot { get; set; }
+
+    public int BistLot { get; set; }
+
+    public int Marj { get; set; }
+
+    public bool AktifMi { get; set; }
+
+}
+
+public class ArbitrajHareket
+{
+    public long Id { get; set; }
+
+    public string RobotAdi { get; internal set; }
+    public string HisseAdi { get; internal set; }
+    public double ViopSatisFiyati { get; internal set; }
+    public double ViopAlisFiyati { get; internal set; }
+    public int ViopLot { get; set; }
+    public double BistAlisFiyati { get; internal set; }
+    public double BistSatisFiyati { get; internal set; }
+    public int BistLot { get; set; }
+    public double Kar { get; internal set; }
+    public System.DateTime PozisyonTarih { get; internal set; }
+    public System.DateTime KapanisTarihi { get; internal set; }
+    public bool AktifMi { get; internal set; }
+
+}
+
+public class HisseAdiYuzde
+{
+    public string HisseAdi { get; set; }
+    public double Yuzde { get; set; }
+}
+public class ArbitrajStrateji
+{
+    public static void Baslat(dynamic Sistem)
+    {
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+        var list = new System.Collections.Generic.List<HisseAdiYuzde>();
+        //Sistem.Debug("Basladik" + Sistem.Name);
+
+        Sistem.AlgoIslem = "OK";
+        if (Sistem.BaglantiVar == false)
+        {
+            //Sistem.Debug("Baglanti Yok");
+            return;
+        }
+
+        if (IdealManager.SaatiKontrolEt(Sistem) == true)
+        {
+            //Sistem.Debug("Saat Uygun Degil");
+            return;
+        }
+
+        var hisseList = DatabaseManager.ArbitrajGetir();
+        //sb.AppendLine(hisseList.Count.ToString());
+        foreach (var hisse in hisseList)
+        {
+            //sb.Append(hisse.HisseAdi);
+
+            double bistSatisFiyati = IdealManager.AlisFiyatiGetir(Sistem, hisse.HisseAdi);
+            double viopAlisFiyati = IdealManager.ViopAlisFiyatiGetir(Sistem, hisse.HisseAdi);
+
+          
+
+            if (bistSatisFiyati == 0 || viopAlisFiyati == 0)
+                continue;
+
+            var arbitrajHareket = DatabaseManager.ArbitrajKontrol(hisse.HisseAdi);
+            if (arbitrajHareket != null)
+            {
+               // sb.AppendLine("bist =" + bistSatisFiyati + "viop " +  viopAlisFiyati);
+
+                if (bistSatisFiyati >= viopAlisFiyati)
+                {
+                    IdealManager.ViopAl(Sistem, hisse.HisseAdi, hisse.ViopLot, viopAlisFiyati);
+                    IdealManager.Sat(Sistem, hisse.HisseAdi, hisse.BistLot, bistSatisFiyati);
+                    arbitrajHareket.ViopAlisFiyati = viopAlisFiyati;
+                    arbitrajHareket.BistSatisFiyati = bistSatisFiyati;
+                    DatabaseManager.ArbitrajHareketGuncelle(arbitrajHareket);
+                }
+                //Sistem.Mesaj(sb.ToString());
+                continue;//yeni pozisyon acma
+            }
+
+            //sb.AppendLine("2");
+
+            double bistAlisFiyati = IdealManager.AlisFiyatiGetir(Sistem, hisse.HisseAdi);
+            double viopSatisFiyati = IdealManager.ViopSatisFiyatiGetir(Sistem, hisse.HisseAdi);
+
+            if (bistAlisFiyati == 0 || viopSatisFiyati == 0)
+                continue;
+            var yuzde = IdealManager.YuzdeFarkiHesapla(viopSatisFiyati, bistAlisFiyati);
+
+            //sb.AppendLine(hisse.HisseAdi + "#" + yuzde.ToString() + "#" + bistSatisFiyati.ToString() + "#" + viopAlisFiyati.ToString());
+            list.Add(new HisseAdiYuzde { HisseAdi = hisse.HisseAdi, Yuzde = yuzde });
+
+            if (yuzde >= hisse.Marj)
+            {
+               
+                if (RiskYoneticisi.ArbitrajDegerlendir(Sistem, hisse.HisseAdi) == 1)
+                {
+                    //Sistem.Mesaj("5");
+                    IdealManager.ViopSat(Sistem, hisse.HisseAdi, hisse.ViopLot, viopSatisFiyati);
+                    IdealManager.Al(Sistem, hisse.HisseAdi, hisse.BistLot, bistAlisFiyati);
+                    var pozisyonAl = new ArbitrajHareket();
+                    pozisyonAl.ViopSatisFiyati = viopSatisFiyati;
+                    pozisyonAl.BistAlisFiyati = bistAlisFiyati;
+                    pozisyonAl.HisseAdi = hisse.HisseAdi;
+                    pozisyonAl.BistLot = hisse.BistLot;
+                    pozisyonAl.ViopLot = hisse.ViopLot;
+                    pozisyonAl.RobotAdi = Sistem.Name;
+                    pozisyonAl.PozisyonTarih = System.DateTime.Now;
+
+                    DatabaseManager.ArbitrajHareketGuncelle(pozisyonAl);
+
+                    //sb.AppendLine("6");
+                }
+            }
+            else 
+            {
+                //sb.AppendLine("7 " + yuzde.ToString() + " " + hisse.Marj);
+            }
+
+           
+        }
+
+        System.Func<HisseAdiYuzde, double> keySelector = item => item.Yuzde;
+        list.Sort((a, b) => keySelector(a).CompareTo(keySelector(b)));
+
+        foreach (var item in list)
+        {
+
+            sb.AppendLine(item.HisseAdi + "==>" + item.Yuzde.ToString());
+        }
+
+        Sistem.Mesaj(sb.ToString());
+    }
+
+
+}
+
+
 
 public class DatabaseManager
 {
@@ -181,6 +299,22 @@ public class DatabaseManager
 
     }
 
+    public static void HisseGuncelle(Hisse hisse)
+    {
+        var conn = OpenConnection();
+
+        System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
+        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+        cmd.Connection = conn;
+        cmd.CommandText = "upd_hisse";
+
+        cmd.Parameters.AddWithValue("@Id", hisse.Id);
+        cmd.Parameters.AddWithValue("@PiyasaAlis", hisse.PiyasaAlis);
+        cmd.Parameters.AddWithValue("@PiyasaSatis", hisse.PiyasaSatis);
+        cmd.ExecuteNonQuery();
+        cmd.Connection.Close();
+
+    }
     public static HisseHareket HisseHareketGetir(string hisseAdi, double fiyat)
     {
         HisseHareket hisse = null;
@@ -587,6 +721,13 @@ public class Hisse
     public int Marj { get; set; }
 
     public bool Aktif { get; set; }
+
+    public bool AlisAktif { get; set; }
+    public bool SatisAktif { get; set; }
+
+    public double PiyasaAlis { get; set; }
+
+    public double PiyasaSatis { get; set; }
 
 }
 
@@ -997,12 +1138,11 @@ public class IdealManager
         return yuzdeFark;
     }
 }
-
-public class Lib
-{
-        public void Baslat(dynamic Sistem, string hisseAdi)
+    public class KademeStrateji
+    {
+        public static void Baslat(dynamic Sistem, string hisseAdi)
         {
-           
+
             //Sistem.Debug("Basladik" + Sistem.Name);
 
             Sistem.AlgoIslem = "OK";
@@ -1012,11 +1152,11 @@ public class Lib
                 return;
             }
 
-            if (IdealManager.SaatiKontrolEt(Sistem) == true)
-            {
+            //if (IdealManager.SaatiKontrolEt(Sistem) == true)
+            //{
                 //Sistem.Debug("Saat Uygun Degil");
-                return;
-            }
+                //return;
+            //}
 
             double alisFiyati = IdealManager.AlisFiyatiGetir(Sistem, hisseAdi);//303.25
             //Sistem.Debug(string.Format("AlisFiyat {0}", alisFiyati));
@@ -1029,6 +1169,8 @@ public class Lib
                 //devre kesmis
                 return;
             }
+
+            
 
             double marj = 0;
             int lot;
@@ -1044,7 +1186,8 @@ public class Lib
                 }
                 hisse.HisseAdi = hisseAdi;
             }
-
+            hisse.PiyasaAlis = alisFiyati;
+            hisse.PiyasaSatis= satisFiyati;
 
             if (hisse.MarjTipi == 0)//kademe
             {
@@ -1057,7 +1200,7 @@ public class Lib
 
             }
 
-            if (IdealManager.SatisSaatiKontrolEt(Sistem) == false)
+            if (IdealManager.SatisSaatiKontrolEt(Sistem) == false && hisse.SatisAktif)
             {
                 var satisKontrol = DatabaseManager.HisseSatimKontrol(hisseAdi, satisFiyati, marj);
                 if (satisKontrol.Item1 > 0)
@@ -1077,7 +1220,7 @@ public class Lib
             }
 
 
-            if (IdealManager.AlisSaatiKontrolEt(Sistem) == false)
+            if (IdealManager.AlisSaatiKontrolEt(Sistem) == false && hisse.AlisAktif)
             {
 
                 var risk = RiskYoneticisi.RiskHesapla(Sistem, hisse, alisFiyati, marj);
@@ -1086,9 +1229,9 @@ public class Lib
                     marj = System.Math.Round(marj * risk, 2);
 
                     var endeksBoleni = RiskYoneticisi.EndeksDegerlendir(Sistem, hisse);
-                    var alimTutari = IdealManager.DivideAndRoundToInt(hisse.AlimTutari, endeksBoleni); 
+                    var alimTutari = IdealManager.DivideAndRoundToInt(hisse.AlimTutari, endeksBoleni);
                     lot = IdealManager.DivideAndRoundToInt(alimTutari, alisFiyati);
-                
+
 
                     var hisseAlimKontrol = DatabaseManager.HisseAlimKontrol(hisseAdi, alisFiyati, marj);
                     if (hisseAlimKontrol)
@@ -1106,10 +1249,20 @@ public class Lib
                         //Sistem.Debug(string.Format("{0} {1} alis icin uygun degil", hisseAdi, alisFiyati));
                     }
                 }
-               
-            }
-        }
 
+            }
+
+            DatabaseManager.HisseGuncelle(hisse);
+        }
+    }
+
+
+public class Lib
+{
+    public void Baslat(dynamic Sistem,string hisseAdi)
+    {
+        KademeStrateji.Baslat(Sistem, hisseAdi);
+    }
     public void ManuelAnalizBaslat(dynamic Sistem)
     {
         ManuelAnalizStrateji.Baslat(Sistem);
@@ -1129,6 +1282,39 @@ public class Lib
     {
         ArbitrajStrateji.Baslat(Sistem);
     }
+
+    static Portfoy p = null;
+    public void Portfoy(dynamic Sistem)
+    {
+        if (p == null)
+        { 
+            p = new Portfoy();
+            p.Show();
+        }
+        p.Refresh(Sistem);
+
+        //foreach (System.Windows.Forms.Form frm in System.Windows.Forms.Application.OpenForms)
+        //{
+        //    if (frm.Name == "formPortfolio")
+        //    {
+        //        var button = new System.Windows.Forms.Button();
+        //        button.Size = new System.Drawing.Size(20, 43);
+        //        button.Name = "Iko Portfoy";
+        //        button.Click += Button_Click;
+        //        button.Location = new System.Drawing.Point(100, 100);
+        //        frm.Controls.Add(p);
+        //    }
+        //}
+
+        
+    }
+
+    private void Button_Click(object sender, System.EventArgs e)
+    {
+        Portfoy p = new Portfoy();
+        p.Show();
+    }
+
 }
 
 
@@ -1166,7 +1352,7 @@ public class ManuelAnalizStrateji
                 IdealManager.Sat(Sistem, hisseEmir.HisseAdi, hisseEmir.Lot, satisFiyati);
                 hisseEmir.SatisTarihi = System.DateTime.Now;
                 hisseEmir.Durum = HisseEmirDurum.KarAlindi.ToString();
-                hisseEmir.Kar = System.Math.Round(satisFiyati - hisseEmir.AlisHedefi, 2);
+                hisseEmir.Kar = System.Math.Round(satisFiyati - hisseEmir.AlisHedefi, 2) * hisseEmir.Lot;
                 DatabaseManager.HisseEmirGuncelle(hisseEmir);
             }
 
@@ -1175,7 +1361,7 @@ public class ManuelAnalizStrateji
                 IdealManager.Sat(Sistem, hisseEmir.HisseAdi, hisseEmir.Lot, satisFiyati);
                 hisseEmir.SatisTarihi = System.DateTime.Now;
                 hisseEmir.Durum = HisseEmirDurum.StopOldu.ToString();
-                hisseEmir.Kar = System.Math.Round(satisFiyati - hisseEmir.AlisHedefi, 2);
+                hisseEmir.Kar = System.Math.Round(satisFiyati - hisseEmir.AlisHedefi, 2) * hisseEmir.Lot;
                 DatabaseManager.HisseEmirGuncelle(hisseEmir);
             }
         }
@@ -1199,6 +1385,57 @@ public class ManuelAnalizStrateji
         }
     }
 }
+
+public class Portfoy : System.Windows.Forms.Form
+{
+    private System.Windows.Forms.Label label1;
+    private System.ComponentModel.IContainer components = null;
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing && (components != null))
+        {
+            components.Dispose();
+        }
+        base.Dispose(disposing);
+    }
+
+    private void InitializeComponent()
+    {
+            this.label1 = new System.Windows.Forms.Label();
+            this.SuspendLayout();
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(211, 59);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(35, 13);
+            this.label1.TabIndex = 0;
+            this.label1.Text = "label1";
+            // 
+            // Portfoy
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Controls.Add(this.label1);
+            this.Name = "Portfoy";
+            this.Text = "Portfoy";
+            this.ResumeLayout(false);
+            this.PerformLayout();
+
+    }
+    public Portfoy()
+    {
+        InitializeComponent();
+    }
+    public void Refresh(dynamic Sistem)
+    {
+        label1.Text = System.DateTime.Now.ToString();
+    }
+}
+
 
 
 

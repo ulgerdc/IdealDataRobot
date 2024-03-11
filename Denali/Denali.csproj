@@ -36,11 +36,19 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Net.Http" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Arbitraj.cs" />
     <Compile Include="ArbitrajHareket.cs" />
+    <Compile Include="5_8_13Strateji.cs" />
+    <Compile Include="KademeStrateji.cs" />
+    <Compile Include="Portfoy.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="SabahCoskusuHareket.cs" />
     <Compile Include="HisseEmir.cs" />
     <Compile Include="HisseEmirDurum.cs" />
