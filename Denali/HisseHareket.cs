@@ -9,4 +9,6 @@
     public int Lot { get; set; }
     public bool AktifMi { get; internal set; }
     public double Kar { get; internal set; }
+    public int PozisyonTipi { get; set; }
+    public double TepeNoktasi { get; set; }
 }

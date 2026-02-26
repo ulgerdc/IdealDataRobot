@@ -50,7 +50,7 @@ public class ManuelAnalizStrateji
         foreach (var hisseEmir in hisseEmirList)
         {
             double alisFiyati = IdealManager.AlisFiyatiGetir(Sistem, hisseEmir.HisseAdi);
-            if (alisFiyati == 0 || alisFiyati == 0)
+            if (alisFiyati == 0)
             {
                 //devre kesmis
                 continue;

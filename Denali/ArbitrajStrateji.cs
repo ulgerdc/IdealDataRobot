@@ -47,11 +47,11 @@ public class ArbitrajStrateji
 
                 if (bistSatisFiyati >= viopAlisFiyati)
                 {
-                    IdealManager.ViopAl(Sistem, hisse.HisseAdi, hisse.ViopLot, viopAlisFiyati);
-                    IdealManager.Sat(Sistem, hisse.HisseAdi, hisse.BistLot, bistSatisFiyati);
+                    //IdealManager.ViopAl(Sistem, hisse.HisseAdi, hisse.ViopLot, viopAlisFiyati);
+                    //IdealManager.Sat(Sistem, hisse.HisseAdi, hisse.BistLot, bistSatisFiyati);
                     arbitrajHareket.ViopAlisFiyati = viopAlisFiyati;
                     arbitrajHareket.BistSatisFiyati = bistSatisFiyati;
-                    DatabaseManager.ArbitrajHareketGuncelle(arbitrajHareket);
+                    //DatabaseManager.ArbitrajHareketGuncelle(arbitrajHareket);
                 }
                 //Sistem.Mesaj(sb.ToString());
                 continue;//yeni pozisyon acma
@@ -75,8 +75,8 @@ public class ArbitrajStrateji
                 if (RiskYoneticisi.ArbitrajDegerlendir(Sistem, hisse.HisseAdi) == 1)
                 {
                     //Sistem.Mesaj("5");
-                    IdealManager.ViopSat(Sistem, hisse.HisseAdi, hisse.ViopLot, viopSatisFiyati);
-                    IdealManager.Al(Sistem, hisse.HisseAdi, hisse.BistLot, bistAlisFiyati);
+                    //IdealManager.ViopSat(Sistem, hisse.HisseAdi, hisse.ViopLot, viopSatisFiyati);
+                    //IdealManager.Al(Sistem, hisse.HisseAdi, hisse.BistLot, bistAlisFiyati);
                     var pozisyonAl = new ArbitrajHareket();
                     pozisyonAl.ViopSatisFiyati = viopSatisFiyati;
                     pozisyonAl.BistAlisFiyati = bistAlisFiyati;
@@ -86,7 +86,7 @@ public class ArbitrajStrateji
                     pozisyonAl.RobotAdi = Sistem.Name;
                     pozisyonAl.PozisyonTarih = System.DateTime.Now;
 
-                    DatabaseManager.ArbitrajHareketGuncelle(pozisyonAl);
+                    //DatabaseManager.ArbitrajHareketGuncelle(pozisyonAl);
 
                     //sb.AppendLine("6");
                 }

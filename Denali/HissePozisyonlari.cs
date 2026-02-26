@@ -7,4 +7,6 @@
     public int AcikPozisyonSayisi { get; set; }
     public double AcikPozisyonAlimTutari { get; internal set; }
     public double ToplamKar { get; internal set; }
+    public double GridAcikTutar { get; internal set; }
+    public double CoreAcikTutar { get; internal set; }
 }

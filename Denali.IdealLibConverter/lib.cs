@@ -1223,7 +1223,7 @@ public class IdealManager
             if (IdealManager.AlisSaatiKontrolEt(Sistem) == false && hisse.AlisAktif)
             {
 
-                var risk = RiskYoneticisi.RiskHesapla(Sistem, hisse, alisFiyati, marj);
+                var risk = 1;// RiskYoneticisi.RiskHesapla(Sistem, hisse, alisFiyati, marj);
                 if (risk > 0)
                 {
                     marj = System.Math.Round(marj * risk, 2);
@@ -1491,6 +1491,8 @@ public class RiskYoneticisi
 
     public static int EndeksDegerlendir(dynamic Sistem, Hisse hisse)
     {
+            return 1;
+
         double bist100Yuzde = IdealManager.Bist100EndeksYuzde(Sistem);
         double bist30Yuzde = IdealManager.Bist30EndeksYuzde(Sistem);
         double viop30Yuzde = IdealManager.Viop30EndeksYuzde(Sistem);

@@ -23,7 +23,7 @@ public class Hisse
     public System.DateTime SonIslemTarihi { get; set; }
     public int MarjTipi { get; set; }
 
-    public int Marj { get; set; }
+    public double Marj { get; set; }
 
     public bool Aktif { get; set; }
 
@@ -33,5 +33,15 @@ public class Hisse
     public double PiyasaAlis { get; set; }
 
     public double PiyasaSatis { get; set; }
+
+    public int CoreOran { get; set; }
+    public double CoreMarj { get; set; }
+    public double TrailingStopYuzde { get; set; }
+    public double ButceLimitYuzde { get; set; }
+    public double ButceAtrGecisYuzde { get; set; }
+
+    public int AtrPeriyot { get; set; }
+    public double AtrCarpan { get; set; }
+    public string AtrZamanDilimi { get; set; }
 
 }

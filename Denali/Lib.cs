@@ -8,6 +8,11 @@
     {
         ManuelAnalizStrateji.Baslat(Sistem);
     }
+    
+    public void KademeGelismisBaslat(dynamic Sistem,string hisseAdi)
+    {
+        KademeStratejiGelismis.Baslat(Sistem, hisseAdi);
+    }
 
     public void SabahCoskusuBaslat(dynamic Sistem)
     {
@@ -22,6 +27,16 @@
     public void ArbitrajStratejiBaslat(dynamic Sistem)
     {
         ArbitrajStrateji.Baslat(Sistem);
+    }
+
+    public void ArbitrajGelismisBaslat(dynamic Sistem)
+    {
+        ArbitrajStratejiGelismis.Baslat(Sistem);
+    }
+
+    public void YutanMumBaslat(dynamic Sistem)
+    {
+        YutanMumStrateji.Baslat(Sistem);
     }
 
     static Portfoy p = null;

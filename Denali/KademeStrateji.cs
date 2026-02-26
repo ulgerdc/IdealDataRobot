@@ -57,8 +57,11 @@
             else if (hisse.MarjTipi == 1)//Binde
             {
                 marj = IdealManager.DivideAndNoRound(hisse.Marj, 1000) * alisFiyati;
-
             }
+
+            // Minimum %0.5 kar hedefi (komisyon + BSMV'yi karsilamak icin)
+            double minimumMarj = alisFiyati * 0.005;
+            marj = System.Math.Max(marj, minimumMarj);
 
             if (IdealManager.SatisSaatiKontrolEt(Sistem) == false && hisse.SatisAktif)
             {

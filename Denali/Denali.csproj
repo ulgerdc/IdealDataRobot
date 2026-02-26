@@ -31,6 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -43,9 +46,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Arbitraj.cs" />
+    <Compile Include="ArbitrajGelismisConfig.cs" />
+    <Compile Include="ArbitrajGelismisHareket.cs" />
+    <Compile Include="ArbitrajSpreadLog.cs" />
+    <Compile Include="ArbitrajStratejiGelismis.cs" />
     <Compile Include="ArbitrajHareket.cs" />
     <Compile Include="5_8_13Strateji.cs" />
     <Compile Include="KademeStrateji.cs" />
+    <Compile Include="KademeStratejiGelismis.cs" />
     <Compile Include="Portfoy.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -63,7 +71,18 @@
     <Compile Include="Hisse.cs" />
     <Compile Include="HisseHareket.cs" />
     <Compile Include="HissePozisyonlari.cs" />
+    <Compile Include="YutanMumConfig.cs" />
+    <Compile Include="YutanMumBatch.cs" />
+    <Compile Include="YutanMumHareket.cs" />
+    <Compile Include="YutanMumStrateji.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="iDeal_SistemGenel.pdf" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="script.sql" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
