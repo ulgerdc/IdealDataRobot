@@ -1,0 +1,101 @@
+@page "{id:long}"
+@model StockPortfolioReports.Pages.Arbitraj.AyarDuzenleModel
+@{
+    ViewData["Title"] = "Arbitraj Ayar Duzenle - " + Model.Config.HisseAdi;
+}
+
+<h2>@Model.Config.HisseAdi - Arbitraj Ayar Duzenle</h2>
+
+<form method="post">
+    <input type="hidden" asp-for="Config.Id" />
+    <input type="hidden" asp-for="Config.HisseAdi" />
+    <input type="hidden" asp-for="Config.ArbitrajTipi" />
+    <input type="hidden" asp-for="Config.Tarih" />
+
+    <div class="row">
+        <div class="col-md-6">
+            <fieldset class="border p-3 mb-3">
+                <legend class="w-auto px-2 fs-6">Temel Bilgiler</legend>
+                <div class="mb-2">
+                    <label class="form-label">Hisse Adi</label>
+                    <input class="form-control" value="@Model.Config.HisseAdi" readonly />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Arbitraj Tipi</label>
+                    <input class="form-control" value="@(Model.Config.ArbitrajTipi == 0 ? "Spot-VIOP" : "Takvim Spread")" readonly />
+                </div>
+            </fieldset>
+
+            <fieldset class="border p-3 mb-3">
+                <legend class="w-auto px-2 fs-6">Vade Bilgileri</legend>
+                <div class="mb-2">
+                    <label asp-for="Config.YakinVadeKodu" class="form-label">Yakin Vade Kodu</label>
+                    <input asp-for="Config.YakinVadeKodu" class="form-control" />
+                </div>
+                <div class="mb-2">
+                    <label asp-for="Config.YakinVadeSonGun" class="form-label">Yakin Vade Son Gun</label>
+                    <input asp-for="Config.YakinVadeSonGun" class="form-control" type="date" />
+                </div>
+                <div class="mb-2">
+                    <label asp-for="Config.UzakVadeKodu" class="form-label">Uzak Vade Kodu</label>
+                    <input asp-for="Config.UzakVadeKodu" class="form-control" />
+                </div>
+                <div class="mb-2">
+                    <label asp-for="Config.UzakVadeSonGun" class="form-label">Uzak Vade Son Gun</label>
+                    <input asp-for="Config.UzakVadeSonGun" class="form-control" type="date" />
+                </div>
+            </fieldset>
+        </div>
+
+        <div class="col-md-6">
+            <fieldset class="border p-3 mb-3">
+                <legend class="w-auto px-2 fs-6">Pozisyon Ayarlari</legend>
+                <div class="mb-2">
+                    <label asp-for="Config.BistLot" class="form-label">BIST Lot</label>
+                    <input asp-for="Config.BistLot" class="form-control" />
+                </div>
+                <div class="mb-2">
+                    <label asp-for="Config.ViopLot" class="form-label">VIOP Lot</label>
+                    <input asp-for="Config.ViopLot" class="form-control" />
+                </div>
+                <div class="mb-2">
+                    <label asp-for="Config.GirisMarji" class="form-label">Giris Marji (%)</label>
+                    <input asp-for="Config.GirisMarji" class="form-control" />
+                </div>
+                <div class="mb-2">
+                    <label asp-for="Config.CikisMarji" class="form-label">Cikis Marji (%)</label>
+                    <input asp-for="Config.CikisMarji" class="form-control" />
+                </div>
+            </fieldset>
+
+            <fieldset class="border p-3 mb-3">
+                <legend class="w-auto px-2 fs-6">Faiz & Temettu</legend>
+                <div class="mb-2">
+                    <label asp-for="Config.YillikFaiz" class="form-label">Yillik Faiz (%)</label>
+                    <input asp-for="Config.YillikFaiz" class="form-control" />
+                </div>
+                <div class="mb-2">
+                    <label asp-for="Config.TemettuTutar" class="form-label">Temettu Tutar (TL)</label>
+                    <input asp-for="Config.TemettuTutar" class="form-control" />
+                </div>
+                <div class="mb-2">
+                    <label asp-for="Config.TemettuTarihi" class="form-label">Temettu Tarihi (Ex-Date)</label>
+                    <input asp-for="Config.TemettuTarihi" class="form-control" type="date" />
+                </div>
+            </fieldset>
+
+            <fieldset class="border p-3 mb-3">
+                <legend class="w-auto px-2 fs-6">Durum</legend>
+                <div class="form-check mb-2">
+                    <input asp-for="Config.AktifMi" class="form-check-input" />
+                    <label asp-for="Config.AktifMi" class="form-check-label">Aktif</label>
+                </div>
+            </fieldset>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <button type="submit" class="btn btn-primary">Kaydet</button>
+        <a asp-page="Ayarlar" class="btn btn-secondary">Iptal</a>
+    </div>
+</form>

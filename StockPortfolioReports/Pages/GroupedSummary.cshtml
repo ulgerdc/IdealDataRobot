@@ -1,0 +1,42 @@
+﻿@page
+@model GroupedSummaryModel
+@{
+    var secim = Model.ViewMode;
+}
+
+<h2>Gruplu Hisse Özeti</h2>
+
+<form method="get">
+    <label for="ViewMode">Görüntüleme Tipi:</label>
+    <select name="ViewMode" id="ViewMode" onchange="this.form.submit()">
+        <option value="gunluk" selected="@(secim == "gunluk")">Günlük</option>
+        <option value="haftalik" selected="@(secim == "haftalik")">Haftalık</option>
+        <option value="aylik" selected="@(secim == "aylik")">Aylık</option>
+    </select>
+</form>
+
+<table class="table table-striped mt-3">
+    <thead>
+        <tr>
+            <th>Grup</th>
+            <th>Hisse</th>
+            <th>Toplam Alış</th>
+            <th>Satılan</th>
+            <th>Satılmamış</th>
+            <th>Toplam Kar</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Ozets)
+        {
+            <tr>
+                <td>@item.GrupTarihi</td>
+                <td><a asp-page="/HisseDetay" asp-route-hisse="@item.HisseAdi">@item.HisseAdi</a></td>
+                <td>@item.ToplamAlis</td>
+                <td>@item.Satilan</td>
+                <td>@item.Satilmamis</td>
+                <td>@item.ToplamKar.ToString("C")</td>
+            </tr>
+        }
+    </tbody>
+</table>

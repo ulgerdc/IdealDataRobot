@@ -1,0 +1,190 @@
+@page
+@model HisseDetayModel
+@{
+    ViewData["Title"] = Model.Hisse + " - Detay";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>@Model.Hisse</h2>
+    <a asp-page="/HisseYonetimi/Edit" asp-route-id="@Model.HisseBilgi!.Id" class="btn btn-sm btn-outline-primary">Duzenle</a>
+</div>
+
+<!-- Metrik kartlar -->
+<div class="row mb-4">
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Gerceklesmis Kar</h6>
+                <h4 class="@(Model.GerceklesmisKar >= 0 ? "text-success" : "text-danger")">
+                    @Model.GerceklesmisKar.ToString("N0") TL
+                </h4>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Potansiyel Kar</h6>
+                <h4 class="@(Model.PotansiyelKar >= 0 ? "text-success" : "text-danger")">
+                    @Model.PotansiyelKar.ToString("N0") TL
+                </h4>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Butce Kullanimi</h6>
+                <h4>%@Model.ButceYuzde.ToString("N1")</h4>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar @(Model.ButceYuzde > 80 ? "bg-danger" : Model.ButceYuzde > 60 ? "bg-warning" : "bg-success")"
+                         style="width: @Model.ButceYuzde.ToString("N0")%"></div>
+                </div>
+                <small class="text-muted">@Model.KullanilanButce.ToString("N0") / @Model.HisseBilgi!.Butce.ToString("N0")</small>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Piyasa Fiyati</h6>
+                <h4>@((Model.HisseBilgi!.PiyasaSatis ?? 0).ToString("N2")) TL</h4>
+                <small class="text-muted">
+                    Marj: @(Model.HisseBilgi.Marj ?? 0)
+                    (@((Model.HisseBilgi.MarjTipi ?? 0) == 0 ? "Kademe" : (Model.HisseBilgi.MarjTipi ?? 0) == 1 ? "Binde" : "ATR"))
+                </small>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Ort. Maliyet</h6>
+                <h4>
+                    @Model.OrtalamaMaliyet.ToString("N2") TL
+                    @if (Model.OrtalamaMaliyet > 0)
+                    {
+                        <span class="badge @(Model.MaliyetFarkYuzde >= 0 ? "bg-success" : "bg-danger") fs-6">
+                            @(Model.MaliyetFarkYuzde >= 0 ? "+" : "")@Model.MaliyetFarkYuzde.ToString("N1")%
+                        </span>
+                    }
+                </h4>
+                <small class="text-muted">@Model.AcikPozisyonlar.Sum(p => p.Lot) lot</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hisse config ozet -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col"><small class="text-muted d-block">Core Oran</small><strong>%@(Model.HisseBilgi.CoreOran?.ToString() ?? "-")</strong></div>
+                    <div class="col"><small class="text-muted d-block">Core Marj</small><strong>%@(Model.HisseBilgi.CoreMarj?.ToString("N0") ?? "-")</strong></div>
+                    <div class="col"><small class="text-muted d-block">Trailing Stop</small><strong>%@(Model.HisseBilgi.TrailingStopYuzde?.ToString("N1") ?? "-")</strong></div>
+                    <div class="col"><small class="text-muted d-block">Butce Limit</small><strong>%@(Model.HisseBilgi.ButceLimitYuzde?.ToString("N0") ?? "-")</strong></div>
+                    <div class="col"><small class="text-muted d-block">ATR Gecis</small><strong>%@(Model.HisseBilgi.ButceAtrGecisYuzde?.ToString("N0") ?? "-")</strong></div>
+                    <div class="col"><small class="text-muted d-block">ATR Periyot</small><strong>@(Model.HisseBilgi.AtrPeriyot?.ToString() ?? "-")</strong></div>
+                    <div class="col">
+                        <small class="text-muted d-block">Durum</small>
+                        @if (Model.HisseBilgi.AlisAktif ?? false) { <span class="badge bg-success">Alis</span> }
+                        @if (Model.HisseBilgi.SatisAktif ?? false) { <span class="badge bg-info">Satis</span> }
+                        @if (!Model.HisseBilgi.Aktif) { <span class="badge bg-secondary">Pasif</span> }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Acik pozisyonlar -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <h6>Acik Pozisyonlar (@Model.AcikPozisyonlar.Count)</h6>
+        @if (Model.AcikPozisyonlar.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-sm table-striped table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Tip</th>
+                            <th class="text-end">Lot</th>
+                            <th class="text-end">Alis Fiyati</th>
+                            <th class="text-end">Piyasa</th>
+                            <th class="text-end">K/Z</th>
+                            <th class="text-end">Tepe</th>
+                            <th>Alis Tarihi</th>
+                            <th class="text-end">Gun</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Model.AcikPozisyonlar)
+                        {
+                            var kz = ((Model.HisseBilgi!.PiyasaSatis ?? 0) - p.AlisFiyati) * p.Lot;
+                            var gun = (DateTime.Now - p.AlisTarihi).Days;
+                            <tr>
+                                <td>
+                                    @if (p.PozisyonTipi == 0)
+                                    {
+                                        <span class="badge bg-primary">Grid</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">Core</span>
+                                    }
+                                </td>
+                                <td class="text-end">@p.Lot</td>
+                                <td class="text-end">@p.AlisFiyati.ToString("N2")</td>
+                                <td class="text-end">@((Model.HisseBilgi!.PiyasaSatis ?? 0).ToString("N2"))</td>
+                                <td class="text-end @(kz >= 0 ? "text-success" : "text-danger")">@kz.ToString("N2")</td>
+                                <td class="text-end">@(p.TepeNoktasi?.ToString("N2") ?? "-")</td>
+                                <td>@p.AlisTarihi.ToString("dd/MM/yyyy")</td>
+                                <td class="text-end">@gun</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="text-muted mb-0">Acik pozisyon yok.</p>
+        }
+    </div>
+</div>
+
+<!-- Son risk loglar -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <div class="d-flex justify-content-between">
+            <h6>Son Risk Loglari</h6>
+            <a asp-page="/RiskLog" asp-route-HisseFiltre="@Model.Hisse" class="btn btn-sm btn-outline-secondary">Tumu</a>
+        </div>
+        @if (Model.SonRiskLoglar.Any())
+        {
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:150px">Tarih</th>
+                        <th>Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var log in Model.SonRiskLoglar)
+                    {
+                        <tr>
+                            <td><small>@log.Tarih?.ToString("dd/MM/yyyy HH:mm")</small></td>
+                            <td><small>@log.Data</small></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p class="text-muted mb-0">Risk logu yok.</p>
+        }
+    </div>
+</div>

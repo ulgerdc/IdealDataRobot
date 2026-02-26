@@ -1,0 +1,74 @@
+﻿@page
+@model ActiveHoldingsModel
+
+<h2>Aktif Hisseler Raporu</h2>
+
+<!-- Hisse Bazli Ozet -->
+@if (Model.HisseOzetleri.Any())
+{
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <h5>Hisse Bazli Ozet</h5>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Hisse</th>
+                            <th class="text-end">Toplam Lot</th>
+                            <th class="text-end">Ort. Maliyet</th>
+                            <th class="text-end">Piyasa</th>
+                            <th class="text-end">Tutar</th>
+                            <th class="text-end">K/Z</th>
+                            <th class="text-end">K/Z%</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var h in Model.HisseOzetleri)
+                        {
+                            <tr>
+                                <td><a asp-page="/HisseDetay" asp-route-hisse="@h.HisseAdi">@h.HisseAdi</a></td>
+                                <td class="text-end">@h.ToplamLot</td>
+                                <td class="text-end">@h.OrtalamaMaliyet.ToString("N2")</td>
+                                <td class="text-end">@h.PiyasaSatis.ToString("N2")</td>
+                                <td class="text-end">@h.ToplamTutar.ToString("N0")</td>
+                                <td class="text-end @(h.ToplamKarZarar >= 0 ? "text-success" : "text-danger")">@h.ToplamKarZarar.ToString("N0")</td>
+                                <td class="text-end">
+                                    <span class="badge @(h.KarZararYuzde >= 0 ? "bg-success" : "bg-danger")">
+                                        @(h.KarZararYuzde >= 0 ? "+" : "")@h.KarZararYuzde.ToString("N1")%
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Pozisyon Detay -->
+<table class="table">
+    <thead>
+        <tr>
+            <th>Hisse Adı</th>
+            <th>Lot</th>
+            <th>Alış Fiyatı</th>
+            <th>Piyasa Satış</th>
+            <th>Potansiyel Kar</th>
+            <th>Alış Tarihi</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.AktifHisseler)
+        {
+            <tr>
+                <td><a asp-page="/HisseDetay" asp-route-hisse="@item.HisseAdi">@item.HisseAdi</a></td>
+                <td>@item.Lot</td>
+                <td>@item.AlisFiyati</td>
+                <td>@item.PiyasaSatis</td>
+                <td>@item.PotansiyelKar</td>
+                <td>@item.AlisTarihi.ToShortDateString()</td>
+            </tr>
+        }
+    </tbody>
+</table>

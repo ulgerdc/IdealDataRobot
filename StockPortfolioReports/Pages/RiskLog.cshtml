@@ -1,0 +1,120 @@
+@page
+@model RiskLogModel
+@{
+    ViewData["Title"] = "Risk Loglari";
+}
+
+<h2 class="mb-3">Risk Loglari</h2>
+
+<!-- Filtreler -->
+<form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+        <select name="RetentionGun" class="form-select form-select-sm">
+            <option value="1" selected="@(Model.RetentionGun == 1)">Son 1 gun</option>
+            <option value="3" selected="@(Model.RetentionGun == 3)">Son 3 gun</option>
+            <option value="7" selected="@(Model.RetentionGun == 7)">Son 7 gun</option>
+            <option value="14" selected="@(Model.RetentionGun == 14)">Son 14 gun</option>
+            <option value="30" selected="@(Model.RetentionGun == 30)">Son 30 gun</option>
+            <option value="90" selected="@(Model.RetentionGun == 90)">Son 90 gun</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <select name="HisseFiltre" class="form-select form-select-sm">
+            <option value="">Tum Hisseler</option>
+            @foreach (var h in Model.Hisseler)
+            {
+                <option value="@h" selected="@(Model.HisseFiltre == h)">@h</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <input type="date" name="BaslangicTarih" class="form-control form-control-sm"
+               value="@Model.BaslangicTarih?.ToString("yyyy-MM-dd")" placeholder="Baslangic" />
+    </div>
+    <div class="col-auto">
+        <input type="date" name="BitisTarih" class="form-control form-control-sm"
+               value="@Model.BitisTarih?.ToString("yyyy-MM-dd")" placeholder="Bitis" />
+    </div>
+    <div class="col-auto">
+        <input type="text" name="AramaMetni" class="form-control form-control-sm"
+               value="@Model.AramaMetni" placeholder="Arama..." />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-primary">Filtrele</button>
+        <a asp-page="/RiskLog" class="btn btn-sm btn-outline-secondary">Temizle</a>
+    </div>
+</form>
+
+<p class="text-muted small">Toplam @Model.ToplamKayit kayit, Sayfa @Model.Sayfa / @Model.ToplamSayfa</p>
+
+<div class="table-responsive">
+    <table class="table table-sm table-striped table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th style="width:150px">Tarih</th>
+                <th style="width:100px">Hisse</th>
+                <th>Data</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var log in Model.Loglar)
+            {
+                <tr>
+                    <td>@log.Tarih?.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                    <td>
+                        @if (!string.IsNullOrEmpty(log.HisseAdi))
+                        {
+                            <a asp-page="/HisseDetay" asp-route-hisse="@log.HisseAdi">@log.HisseAdi</a>
+                        }
+                    </td>
+                    <td><small>@log.Data</small></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Sayfalama -->
+@if (Model.ToplamSayfa > 1)
+{
+    <nav>
+        <ul class="pagination pagination-sm">
+            @if (Model.Sayfa > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link" asp-page="/RiskLog"
+                       asp-route-Sayfa="@(Model.Sayfa - 1)"
+                       asp-route-HisseFiltre="@Model.HisseFiltre"
+                       asp-route-AramaMetni="@Model.AramaMetni"
+                       asp-route-BaslangicTarih="@Model.BaslangicTarih?.ToString("yyyy-MM-dd")"
+                       asp-route-BitisTarih="@Model.BitisTarih?.ToString("yyyy-MM-dd")"
+                       asp-route-RetentionGun="@Model.RetentionGun">Onceki</a>
+                </li>
+            }
+            @for (int i = Math.Max(1, Model.Sayfa - 3); i <= Math.Min(Model.ToplamSayfa, Model.Sayfa + 3); i++)
+            {
+                <li class="page-item @(i == Model.Sayfa ? "active" : "")">
+                    <a class="page-link" asp-page="/RiskLog"
+                       asp-route-Sayfa="@i"
+                       asp-route-HisseFiltre="@Model.HisseFiltre"
+                       asp-route-AramaMetni="@Model.AramaMetni"
+                       asp-route-BaslangicTarih="@Model.BaslangicTarih?.ToString("yyyy-MM-dd")"
+                       asp-route-BitisTarih="@Model.BitisTarih?.ToString("yyyy-MM-dd")"
+                       asp-route-RetentionGun="@Model.RetentionGun">@i</a>
+                </li>
+            }
+            @if (Model.Sayfa < Model.ToplamSayfa)
+            {
+                <li class="page-item">
+                    <a class="page-link" asp-page="/RiskLog"
+                       asp-route-Sayfa="@(Model.Sayfa + 1)"
+                       asp-route-HisseFiltre="@Model.HisseFiltre"
+                       asp-route-AramaMetni="@Model.AramaMetni"
+                       asp-route-BaslangicTarih="@Model.BaslangicTarih?.ToString("yyyy-MM-dd")"
+                       asp-route-BitisTarih="@Model.BitisTarih?.ToString("yyyy-MM-dd")"
+                       asp-route-RetentionGun="@Model.RetentionGun">Sonraki</a>
+                </li>
+            }
+        </ul>
+    </nav>
+}

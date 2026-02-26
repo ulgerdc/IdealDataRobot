@@ -1,0 +1,156 @@
+@page
+@model StockPortfolioReports.Pages.Arbitraj.SpreadGecmisiModel
+@{
+    ViewData["Title"] = "Spread Gecmisi";
+}
+
+<h2 class="mb-3">Spread Gecmisi</h2>
+
+<!-- Filtreler -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Hisse</label>
+                <select name="ConfigId" class="form-select">
+                    <option value="">Tumu</option>
+                    @foreach (var c in Model.ConfigSecenekleri)
+                    {
+                        <option value="@c.Id" selected="@(Model.ConfigId == c.Id)">@c.Label</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Baslangic</label>
+                <input type="date" name="Baslangic" class="form-control" value="@Model.Baslangic?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Bitis</label>
+                <input type="date" name="Bitis" class="form-control" value="@Model.Bitis?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">Filtrele</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Grafik -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <h6>Spread / Adil Spread / Net Prim</h6>
+        <canvas id="spreadChart" height="100"></canvas>
+    </div>
+</div>
+
+<!-- Tablo -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <h6>Spread Log (@Model.ToplamKayit kayit)</h6>
+        <div class="table-responsive">
+            <table class="table table-sm table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Tarih</th>
+                        <th class="text-end">Bacak 1</th>
+                        <th class="text-end">Bacak 2</th>
+                        <th class="text-end">Spread %</th>
+                        <th class="text-end">Adil %</th>
+                        <th class="text-end">Net Prim %</th>
+                        <th class="text-end">Kalan Gun</th>
+                        <th class="text-center">Giris</th>
+                        <th class="text-center">Cikis</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var log in Model.SpreadLoglari)
+                    {
+                        var rowClass = log.GirisSinyali ? "table-success" : log.CikisSinyali ? "table-danger" : "";
+                        <tr class="@rowClass">
+                            <td>@log.Tarih.ToString("dd.MM.yyyy HH:mm")</td>
+                            <td class="text-end">@log.Bacak1Fiyat.ToString("N2")</td>
+                            <td class="text-end">@log.Bacak2Fiyat.ToString("N2")</td>
+                            <td class="text-end">@log.SpreadYuzde.ToString("N2")</td>
+                            <td class="text-end">@((log.AdilSpreadYuzde ?? 0).ToString("N2"))</td>
+                            <td class="text-end @((log.NetPrimYuzde ?? 0) >= 0 ? "text-success" : "text-danger")">
+                                @((log.NetPrimYuzde ?? 0).ToString("N2"))
+                            </td>
+                            <td class="text-end">@(log.KalanGun ?? 0)</td>
+                            <td class="text-center">
+                                @if (log.GirisSinyali) { <span class="badge bg-success">GIRIS</span> }
+                            </td>
+                            <td class="text-center">
+                                @if (log.CikisSinyali) { <span class="badge bg-danger">CIKIS</span> }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (Model.SayfaSayisi > 1)
+        {
+            <nav>
+                <ul class="pagination pagination-sm justify-content-center">
+                    @for (int i = 1; i <= Model.SayfaSayisi; i++)
+                    {
+                        <li class="page-item @(i == Model.Sayfa ? "active" : "")">
+                            <a class="page-link" asp-page="/Arbitraj/SpreadGecmisi"
+                               asp-route-ConfigId="@Model.ConfigId"
+                               asp-route-Baslangic="@Model.Baslangic?.ToString("yyyy-MM-dd")"
+                               asp-route-Bitis="@Model.Bitis?.ToString("yyyy-MM-dd")"
+                               asp-route-Sayfa="@i">@i</a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    var d = @Html.Raw(Model.GrafikJson);
+    if (d.labels && d.labels.length > 0) {
+        var datasets = [
+            { label: 'Spread %', data: d.spread, borderColor: '#0d6efd', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.3 },
+            { label: 'Adil %', data: d.adil, borderColor: '#fd7e14', borderWidth: 1.5, borderDash: [5,5], fill: false, pointRadius: 0, tension: 0.3 },
+            { label: 'Net Prim %', data: d.prim, borderColor: '#198754', borderWidth: 2, fill: false, pointRadius: 0, tension: 0.3 }
+        ];
+        if (d.girisNoktalar && d.girisNoktalar.length > 0) {
+            datasets.push({
+                label: 'Giris Sinyali', data: d.girisNoktalar,
+                backgroundColor: '#198754', pointRadius: 6, pointStyle: 'triangle',
+                showLine: false
+            });
+        }
+        if (d.cikisNoktalar && d.cikisNoktalar.length > 0) {
+            datasets.push({
+                label: 'Cikis Sinyali', data: d.cikisNoktalar,
+                backgroundColor: '#dc3545', pointRadius: 6, pointStyle: 'rectRot',
+                showLine: false
+            });
+        }
+        new Chart(document.getElementById('spreadChart'), {
+            type: 'line',
+            data: { labels: d.labels, datasets: datasets },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: { ticks: { maxTicksLimit: 20 } },
+                    y: { title: { display: true, text: '%' } }
+                },
+                plugins: {
+                    annotation: d.girisMarji ? {
+                        annotations: {
+                            girisLine: { type: 'line', yMin: d.girisMarji, yMax: d.girisMarji, borderColor: '#198754', borderDash: [5,5], borderWidth: 1 },
+                            cikisLine: { type: 'line', yMin: d.cikisMarji, yMax: d.cikisMarji, borderColor: '#dc3545', borderDash: [5,5], borderWidth: 1 }
+                        }
+                    } : {}
+                }
+            }
+        });
+    }
+</script>
+}

@@ -1,0 +1,31 @@
+﻿@page
+@model PortfolioSummaryModel
+
+<h2>Toplam Kar / Zarar Özeti</h2>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h4>Gerçekleşmiş Kar</h4>
+                <p>@Model.GerceklesmisKar.ToString("C")</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-warning text-dark">
+            <div class="card-body">
+                <h4>Potansiyel Kar</h4>
+                <p>@Model.PotansiyelKar.ToString("C")</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h4>Toplam Kar</h4>
+                <p>@Model.ToplamKar.ToString("C")</p>
+            </div>
+        </div>
+    </div>
+</div>

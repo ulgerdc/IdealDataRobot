@@ -1,0 +1,562 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Yutan Mum (Engulfing Candle) Overnight Batch Backtest
+// Kapanista engulfing sinyal veren hisseleri toplu al, ertesi gun acilista toplu sat
+// Endeks filtresi: XU100 pozitif olma zorunlulugu
+
+//@version=5
+indicator("Yutan Mum Overnight Backtest (Set 3)", overlay=false, max_labels_count=500, max_lines_count=500)
+
+// ==================== PARAMETRELER ====================
+grp_date    = "Tarih Araligi"
+grp_strat   = "Strateji Ayarlari"
+grp_endeks  = "Endeks Filtresi"
+grp_hisse   = "Hisse Secimi (BIST100)"
+
+startDate   = input.time(timestamp("2024-01-01 00:00 +0300"), "Baslangic Tarihi", group=grp_date)
+endDate     = input.time(timestamp("2026-02-25 23:59 +0300"), "Bitis Tarihi",     group=grp_date)
+
+toplamButce     = input.float(100000, "Toplam Butce (TL)",        minval=10000, step=10000, group=grp_strat)
+minHacimCarpani = input.float(1.0,    "Min Hacim Carpani",        minval=0.5, maxval=5.0, step=0.1, group=grp_strat)
+minButcePerHisse= input.float(1000,   "Min Butce/Hisse (TL)",     minval=100, step=100, group=grp_strat)
+
+endeksFiltresi  = input.bool(true,    "Endeks Pozitif Filtresi",  group=grp_endeks, tooltip="XU100 gun icinde pozitif degilse sinyal uretilmez")
+
+// BIST100 kalan 24 hisse (Set 3)
+e01 = input.bool(true, "BUCIM",  group=grp_hisse, inline="r1")
+e02 = input.bool(true, "KAYSE",  group=grp_hisse, inline="r1")
+e03 = input.bool(true, "KERVT",  group=grp_hisse, inline="r1")
+e04 = input.bool(true, "KLSER",  group=grp_hisse, inline="r1")
+e05 = input.bool(true, "MIATK",  group=grp_hisse, inline="r1")
+e06 = input.bool(true, "PAPIL",  group=grp_hisse, inline="r2")
+e07 = input.bool(true, "PEKGY",  group=grp_hisse, inline="r2")
+e08 = input.bool(true, "QUAGR",  group=grp_hisse, inline="r2")
+e09 = input.bool(true, "SDTTR",  group=grp_hisse, inline="r2")
+e10 = input.bool(true, "TABGD",  group=grp_hisse, inline="r2")
+e11 = input.bool(true, "TKNSA",  group=grp_hisse, inline="r3")
+e12 = input.bool(true, "TRGYO", group=grp_hisse, inline="r3")
+e13 = input.bool(true, "TURSG",  group=grp_hisse, inline="r3")
+e14 = input.bool(true, "YEOTK",  group=grp_hisse, inline="r3")
+e15 = input.bool(true, "ZOREN",  group=grp_hisse, inline="r3")
+e16 = input.bool(true, "MPARK",  group=grp_hisse, inline="r4")
+e17 = input.bool(true, "BASGZ",  group=grp_hisse, inline="r4")
+e18 = input.bool(true, "BINHO",  group=grp_hisse, inline="r4")
+e19 = input.bool(true, "CANTE",  group=grp_hisse, inline="r4")
+e20 = input.bool(true, "FENER",  group=grp_hisse, inline="r4")
+e21 = input.bool(true, "KORDS",  group=grp_hisse, inline="r5")
+e22 = input.bool(true, "LOGO",   group=grp_hisse, inline="r5")
+e23 = input.bool(true, "NETAS",  group=grp_hisse, inline="r5")
+e24 = input.bool(true, "PENTA",  group=grp_hisse, inline="r5")
+
+// ==================== SABITLER ====================
+int MAX_HISSE = 24
+
+// ==================== VERI ALMA ====================
+tf = "D"
+
+// XU100 endeks verisi
+[xu100O, xu100C] = request.security("BIST:XU100", tf, [open, close], lookahead=barmerge.lookahead_off)
+endeksPozitif = xu100C > xu100O
+
+// 24 hisse — her biri tek request.security cagrisi
+[o01,c01,v01,po01,pc01,pv01] = request.security("BIST:BUCIM",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o02,c02,v02,po02,pc02,pv02] = request.security("BIST:KAYSE",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o03,c03,v03,po03,pc03,pv03] = request.security("BIST:KERVT",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o04,c04,v04,po04,pc04,pv04] = request.security("BIST:KLSER",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o05,c05,v05,po05,pc05,pv05] = request.security("BIST:MIATK",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o06,c06,v06,po06,pc06,pv06] = request.security("BIST:PAPIL",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o07,c07,v07,po07,pc07,pv07] = request.security("BIST:PEKGY",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o08,c08,v08,po08,pc08,pv08] = request.security("BIST:QUAGR",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o09,c09,v09,po09,pc09,pv09] = request.security("BIST:SDTTR",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o10,c10,v10,po10,pc10,pv10] = request.security("BIST:TABGD",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o11,c11,v11,po11,pc11,pv11] = request.security("BIST:TKNSA",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o12,c12,v12,po12,pc12,pv12] = request.security("BIST:TRGYO", tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o13,c13,v13,po13,pc13,pv13] = request.security("BIST:TURSG",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o14,c14,v14,po14,pc14,pv14] = request.security("BIST:YEOTK",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o15,c15,v15,po15,pc15,pv15] = request.security("BIST:ZOREN",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o16,c16,v16,po16,pc16,pv16] = request.security("BIST:MPARK",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o17,c17,v17,po17,pc17,pv17] = request.security("BIST:BASGZ",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o18,c18,v18,po18,pc18,pv18] = request.security("BIST:BINHO",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o19,c19,v19,po19,pc19,pv19] = request.security("BIST:CANTE",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o20,c20,v20,po20,pc20,pv20] = request.security("BIST:FENER",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o21,c21,v21,po21,pc21,pv21] = request.security("BIST:KORDS",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o22,c22,v22,po22,pc22,pv22] = request.security("BIST:LOGO",   tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o23,c23,v23,po23,pc23,pv23] = request.security("BIST:NETAS",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+[o24,c24,v24,po24,pc24,pv24] = request.security("BIST:PENTA",  tf, [open,close,volume,open[1],close[1],volume[1]], lookahead=barmerge.lookahead_off)
+
+// ==================== VERI ARRAYLERE YUKLE ====================
+var float[] arrO  = array.new_float(MAX_HISSE, 0.0)
+var float[] arrC  = array.new_float(MAX_HISSE, 0.0)
+var float[] arrV  = array.new_float(MAX_HISSE, 0.0)
+var float[] arrPO = array.new_float(MAX_HISSE, 0.0)
+var float[] arrPC = array.new_float(MAX_HISSE, 0.0)
+var float[] arrPV = array.new_float(MAX_HISSE, 0.0)
+var bool[]  arrAktif = array.new_bool(MAX_HISSE, false)
+
+array.set(arrAktif, 0,  e01)
+array.set(arrAktif, 1,  e02)
+array.set(arrAktif, 2,  e03)
+array.set(arrAktif, 3,  e04)
+array.set(arrAktif, 4,  e05)
+array.set(arrAktif, 5,  e06)
+array.set(arrAktif, 6,  e07)
+array.set(arrAktif, 7,  e08)
+array.set(arrAktif, 8,  e09)
+array.set(arrAktif, 9,  e10)
+array.set(arrAktif, 10, e11)
+array.set(arrAktif, 11, e12)
+array.set(arrAktif, 12, e13)
+array.set(arrAktif, 13, e14)
+array.set(arrAktif, 14, e15)
+array.set(arrAktif, 15, e16)
+array.set(arrAktif, 16, e17)
+array.set(arrAktif, 17, e18)
+array.set(arrAktif, 18, e19)
+array.set(arrAktif, 19, e20)
+array.set(arrAktif, 20, e21)
+array.set(arrAktif, 21, e22)
+array.set(arrAktif, 22, e23)
+array.set(arrAktif, 23, e24)
+
+// Fiyat verileri (inline)
+array.set(arrO, 0, nz(o01))
+array.set(arrC, 0, nz(c01))
+array.set(arrV, 0, nz(v01))
+array.set(arrPO, 0, nz(po01))
+array.set(arrPC, 0, nz(pc01))
+array.set(arrPV, 0, nz(pv01))
+array.set(arrO, 1, nz(o02))
+array.set(arrC, 1, nz(c02))
+array.set(arrV, 1, nz(v02))
+array.set(arrPO, 1, nz(po02))
+array.set(arrPC, 1, nz(pc02))
+array.set(arrPV, 1, nz(pv02))
+array.set(arrO, 2, nz(o03))
+array.set(arrC, 2, nz(c03))
+array.set(arrV, 2, nz(v03))
+array.set(arrPO, 2, nz(po03))
+array.set(arrPC, 2, nz(pc03))
+array.set(arrPV, 2, nz(pv03))
+array.set(arrO, 3, nz(o04))
+array.set(arrC, 3, nz(c04))
+array.set(arrV, 3, nz(v04))
+array.set(arrPO, 3, nz(po04))
+array.set(arrPC, 3, nz(pc04))
+array.set(arrPV, 3, nz(pv04))
+array.set(arrO, 4, nz(o05))
+array.set(arrC, 4, nz(c05))
+array.set(arrV, 4, nz(v05))
+array.set(arrPO, 4, nz(po05))
+array.set(arrPC, 4, nz(pc05))
+array.set(arrPV, 4, nz(pv05))
+array.set(arrO, 5, nz(o06))
+array.set(arrC, 5, nz(c06))
+array.set(arrV, 5, nz(v06))
+array.set(arrPO, 5, nz(po06))
+array.set(arrPC, 5, nz(pc06))
+array.set(arrPV, 5, nz(pv06))
+array.set(arrO, 6, nz(o07))
+array.set(arrC, 6, nz(c07))
+array.set(arrV, 6, nz(v07))
+array.set(arrPO, 6, nz(po07))
+array.set(arrPC, 6, nz(pc07))
+array.set(arrPV, 6, nz(pv07))
+array.set(arrO, 7, nz(o08))
+array.set(arrC, 7, nz(c08))
+array.set(arrV, 7, nz(v08))
+array.set(arrPO, 7, nz(po08))
+array.set(arrPC, 7, nz(pc08))
+array.set(arrPV, 7, nz(pv08))
+array.set(arrO, 8, nz(o09))
+array.set(arrC, 8, nz(c09))
+array.set(arrV, 8, nz(v09))
+array.set(arrPO, 8, nz(po09))
+array.set(arrPC, 8, nz(pc09))
+array.set(arrPV, 8, nz(pv09))
+array.set(arrO, 9, nz(o10))
+array.set(arrC, 9, nz(c10))
+array.set(arrV, 9, nz(v10))
+array.set(arrPO, 9, nz(po10))
+array.set(arrPC, 9, nz(pc10))
+array.set(arrPV, 9, nz(pv10))
+array.set(arrO, 10, nz(o11))
+array.set(arrC, 10, nz(c11))
+array.set(arrV, 10, nz(v11))
+array.set(arrPO, 10, nz(po11))
+array.set(arrPC, 10, nz(pc11))
+array.set(arrPV, 10, nz(pv11))
+array.set(arrO, 11, nz(o12))
+array.set(arrC, 11, nz(c12))
+array.set(arrV, 11, nz(v12))
+array.set(arrPO, 11, nz(po12))
+array.set(arrPC, 11, nz(pc12))
+array.set(arrPV, 11, nz(pv12))
+array.set(arrO, 12, nz(o13))
+array.set(arrC, 12, nz(c13))
+array.set(arrV, 12, nz(v13))
+array.set(arrPO, 12, nz(po13))
+array.set(arrPC, 12, nz(pc13))
+array.set(arrPV, 12, nz(pv13))
+array.set(arrO, 13, nz(o14))
+array.set(arrC, 13, nz(c14))
+array.set(arrV, 13, nz(v14))
+array.set(arrPO, 13, nz(po14))
+array.set(arrPC, 13, nz(pc14))
+array.set(arrPV, 13, nz(pv14))
+array.set(arrO, 14, nz(o15))
+array.set(arrC, 14, nz(c15))
+array.set(arrV, 14, nz(v15))
+array.set(arrPO, 14, nz(po15))
+array.set(arrPC, 14, nz(pc15))
+array.set(arrPV, 14, nz(pv15))
+array.set(arrO, 15, nz(o16))
+array.set(arrC, 15, nz(c16))
+array.set(arrV, 15, nz(v16))
+array.set(arrPO, 15, nz(po16))
+array.set(arrPC, 15, nz(pc16))
+array.set(arrPV, 15, nz(pv16))
+array.set(arrO, 16, nz(o17))
+array.set(arrC, 16, nz(c17))
+array.set(arrV, 16, nz(v17))
+array.set(arrPO, 16, nz(po17))
+array.set(arrPC, 16, nz(pc17))
+array.set(arrPV, 16, nz(pv17))
+array.set(arrO, 17, nz(o18))
+array.set(arrC, 17, nz(c18))
+array.set(arrV, 17, nz(v18))
+array.set(arrPO, 17, nz(po18))
+array.set(arrPC, 17, nz(pc18))
+array.set(arrPV, 17, nz(pv18))
+array.set(arrO, 18, nz(o19))
+array.set(arrC, 18, nz(c19))
+array.set(arrV, 18, nz(v19))
+array.set(arrPO, 18, nz(po19))
+array.set(arrPC, 18, nz(pc19))
+array.set(arrPV, 18, nz(pv19))
+array.set(arrO, 19, nz(o20))
+array.set(arrC, 19, nz(c20))
+array.set(arrV, 19, nz(v20))
+array.set(arrPO, 19, nz(po20))
+array.set(arrPC, 19, nz(pc20))
+array.set(arrPV, 19, nz(pv20))
+array.set(arrO, 20, nz(o21))
+array.set(arrC, 20, nz(c21))
+array.set(arrV, 20, nz(v21))
+array.set(arrPO, 20, nz(po21))
+array.set(arrPC, 20, nz(pc21))
+array.set(arrPV, 20, nz(pv21))
+array.set(arrO, 21, nz(o22))
+array.set(arrC, 21, nz(c22))
+array.set(arrV, 21, nz(v22))
+array.set(arrPO, 21, nz(po22))
+array.set(arrPC, 21, nz(pc22))
+array.set(arrPV, 21, nz(pv22))
+array.set(arrO, 22, nz(o23))
+array.set(arrC, 22, nz(c23))
+array.set(arrV, 22, nz(v23))
+array.set(arrPO, 22, nz(po23))
+array.set(arrPC, 22, nz(pc23))
+array.set(arrPV, 22, nz(pv23))
+array.set(arrO, 23, nz(o24))
+array.set(arrC, 23, nz(c24))
+array.set(arrV, 23, nz(v24))
+array.set(arrPO, 23, nz(po24))
+array.set(arrPC, 23, nz(pc24))
+array.set(arrPV, 23, nz(pv24))
+
+// ==================== ENGULFING SINYAL TESPITI ====================
+engulfingSinyal(idx) =>
+    if not array.get(arrAktif, idx)
+        false
+    else
+        bugunO  = array.get(arrO,  idx)
+        bugunC  = array.get(arrC,  idx)
+        bugunV  = array.get(arrV,  idx)
+        dunkuO  = array.get(arrPO, idx)
+        dunkuC  = array.get(arrPC, idx)
+        dunkuV  = array.get(arrPV, idx)
+        if bugunO <= 0 or bugunC <= 0 or dunkuO <= 0 or dunkuC <= 0
+            false
+        else
+            dunkuKirmizi = dunkuC < dunkuO
+            bugunYesil = bugunC > bugunO
+            yutma = bugunO <= dunkuC and bugunC >= dunkuO
+            hacimOK = bugunV > dunkuV * minHacimCarpani
+            dunkuKirmizi and bugunYesil and yutma and hacimOK
+
+// ==================== OVERNIGHT STATE ====================
+var float[] oncekiAlis = array.new_float(MAX_HISSE, 0.0)
+var int[]   oncekiLot  = array.new_int(MAX_HISSE, 0)
+var bool    oncekiBatchVar = false
+var int     oncekiHisseSay = 0
+
+// Istatistikler
+var int   toplamBatch     = 0
+var int   kazancBatch     = 0
+var int   kayipBatch      = 0
+var float toplamKar       = 0.0
+var float toplamZarar     = 0.0
+var float kumulatifKZ     = 0.0
+var float maxDrawdown     = 0.0
+var float zirveSermaye    = 0.0
+var int   toplamSinyal    = 0
+var float enIyiBatch      = 0.0
+var float enKotuBatch     = 0.0
+var int   endeksEngel     = 0   // endeks filtresi kac kez engelledi
+
+// Son 10 batch (ring buffer)
+var int    RING_SIZE       = 10
+var int[]    sonBatchHisse  = array.new_int(10, 0)
+var float[]  sonBatchKar    = array.new_float(10, 0.0)
+var float[]  sonBatchYuzde  = array.new_float(10, 0.0)
+var int      sonBatchIdx    = 0
+
+// Tarih filtresi
+inDateRange = time >= startDate and time <= endDate
+
+// Gorsel flag'ler
+var bool satisBatch = false
+var bool alisBatch  = false
+var bool endeksBlok = false
+satisBatch := false
+alisBatch  := false
+endeksBlok := false
+
+var float buBarKZ = 0.0
+buBarKZ := 0.0
+
+if inDateRange
+    // ---- 1. ONCEKI BATCH'I ACILISTA SAT ----
+    if oncekiBatchVar
+        batchKZ = 0.0
+        batchAlim = 0.0
+        for j = 0 to MAX_HISSE - 1
+            lot = array.get(oncekiLot, j)
+            if lot > 0
+                alisFiyati = array.get(oncekiAlis, j)
+                satisFiyati = array.get(arrO, j)   // gunluk acilis ≈ 10:00
+                if satisFiyati > 0
+                    kz = lot * (satisFiyati - alisFiyati)
+                    batchKZ += kz
+                    batchAlim += lot * alisFiyati
+                array.set(oncekiAlis, j, 0.0)
+                array.set(oncekiLot,  j, 0)
+
+        toplamBatch := toplamBatch + 1
+        if batchKZ >= 0
+            kazancBatch := kazancBatch + 1
+            toplamKar   := toplamKar + batchKZ
+        else
+            kayipBatch  := kayipBatch + 1
+            toplamZarar := toplamZarar + batchKZ
+
+        kumulatifKZ := kumulatifKZ + batchKZ
+        if kumulatifKZ > zirveSermaye
+            zirveSermaye := kumulatifKZ
+        dd = zirveSermaye - kumulatifKZ
+        if dd > maxDrawdown
+            maxDrawdown := dd
+
+        if batchKZ > enIyiBatch
+            enIyiBatch := batchKZ
+        if batchKZ < enKotuBatch
+            enKotuBatch := batchKZ
+
+        ringIdx = sonBatchIdx % RING_SIZE
+        array.set(sonBatchHisse, ringIdx, oncekiHisseSay)
+        array.set(sonBatchKar,   ringIdx, batchKZ)
+        batchYuzde = batchAlim > 0 ? batchKZ / batchAlim * 100 : 0
+        array.set(sonBatchYuzde, ringIdx, batchYuzde)
+        sonBatchIdx := sonBatchIdx + 1
+
+        oncekiBatchVar := false
+        oncekiHisseSay := 0
+        satisBatch := true
+        buBarKZ := batchKZ
+
+    // ---- 2. BUGUN SINYAL TARA ----
+    sinyalIdxler = array.new_int(0)
+    for j = 0 to MAX_HISSE - 1
+        if engulfingSinyal(j)
+            array.push(sinyalIdxler, j)
+
+    sinyalSay = array.size(sinyalIdxler)
+    if sinyalSay > 0
+        // Endeks filtresi: XU100 pozitif degilse sinyal uretme
+        if endeksFiltresi and not endeksPozitif
+            endeksEngel := endeksEngel + 1
+            endeksBlok := true
+        else
+            toplamSinyal := toplamSinyal + sinyalSay
+
+            hisseBasiButce = toplamButce / sinyalSay
+            if hisseBasiButce < minButcePerHisse
+                maxHisse = math.floor(toplamButce / minButcePerHisse)
+                if maxHisse > 0
+                    while array.size(sinyalIdxler) > maxHisse
+                        array.pop(sinyalIdxler)
+                    sinyalSay := array.size(sinyalIdxler)
+                    hisseBasiButce := toplamButce / sinyalSay
+
+            if sinyalSay > 0 and hisseBasiButce >= minButcePerHisse
+                hisseSayaci = 0
+                for k = 0 to sinyalSay - 1
+                    j = array.get(sinyalIdxler, k)
+                    fiyat = array.get(arrC, j)  // gunluk kapanis ≈ 17:59
+                    if fiyat > 0
+                        lot = math.floor(hisseBasiButce / fiyat)
+                        if lot < 1
+                            lot := 1
+                        array.set(oncekiAlis, j, fiyat)
+                        array.set(oncekiLot,  j, int(lot))
+                        hisseSayaci += 1
+
+                if hisseSayaci > 0
+                    oncekiBatchVar := true
+                    oncekiHisseSay := hisseSayaci
+                    alisBatch := true
+
+// ==================== GORSEL ====================
+plot(inDateRange ? kumulatifKZ : na, "Kumulatif K/Z", color=color.new(color.blue, 0), linewidth=2)
+hline(0, "Basabas", color=color.gray, linestyle=hline.style_dashed)
+
+plot(inDateRange and satisBatch ? buBarKZ : na, "Batch K/Z", color=buBarKZ >= 0 ? color.green : color.red, linewidth=4, style=plot.style_histogram)
+
+plotshape(inDateRange and alisBatch,  title="Kapanista Alis",  style=shape.triangleup,   location=location.bottom, color=color.green, size=size.small)
+plotshape(inDateRange and satisBatch and buBarKZ >= 0, title="Acilista Satis +", style=shape.triangledown, location=location.top, color=color.blue, size=size.small)
+plotshape(inDateRange and satisBatch and buBarKZ < 0,  title="Acilista Satis -", style=shape.triangledown, location=location.top, color=color.red,  size=size.small)
+plotshape(inDateRange and endeksBlok, title="Endeks Engel", style=shape.xcross, location=location.bottom, color=color.orange, size=size.tiny)
+
+bgcolor(inDateRange and oncekiBatchVar ? color.new(color.green, 92) : na, title="Pozisyon Acik")
+
+// ==================== DASHBOARD ====================
+if barstate.islast
+    var table dash = table.new(position.top_right, 2, 40, bgcolor=color.new(color.black, 15), border_width=1, border_color=color.gray)
+
+    aktifHisseSay = 0
+    for j = 0 to MAX_HISSE - 1
+        if array.get(arrAktif, j)
+            aktifHisseSay += 1
+
+    row = 0
+    table.cell(dash, 0, row, "YUTAN MUM OVERNIGHT", bgcolor=color.new(color.blue, 20), text_color=color.white, text_size=size.normal)
+    table.cell(dash, 1, row, "", bgcolor=color.new(color.blue, 20))
+    table.merge_cells(dash, 0, row, 1, row)
+
+    row += 1
+    table.cell(dash, 0, row, "Hisse (BIST100)", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(dash, 1, row, str.tostring(aktifHisseSay), text_color=color.white, text_size=size.small, text_halign=text.align_right)
+
+    row += 1
+    table.cell(dash, 0, row, "Butce", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(dash, 1, row, str.tostring(toplamButce, "#,###") + " TL", text_color=color.white, text_size=size.small, text_halign=text.align_right)
+
+    row += 1
+    table.cell(dash, 0, row, "Hacim Carpani", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(dash, 1, row, str.tostring(minHacimCarpani, "#.#") + "x", text_color=color.white, text_size=size.small, text_halign=text.align_right)
+
+    row += 1
+    table.cell(dash, 0, row, "Mod", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(dash, 1, row, "Kapanis Al (≈17:59) → Acilis Sat (≈10:00)", text_color=color.yellow, text_size=size.small, text_halign=text.align_right)
+
+    row += 1
+    endeksDurum = endeksFiltresi ? "AKTIF" : "KAPALI"
+    endeksRenk  = endeksFiltresi ? color.green : color.gray
+    table.cell(dash, 0, row, "XU100 Filtre", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(dash, 1, row, endeksDurum + " (" + str.tostring(endeksEngel) + " engel)", text_color=endeksRenk, text_size=size.small, text_halign=text.align_right)
+
+    // --- BATCH ISTATISTIK ---
+    row += 1
+    table.cell(dash, 0, row, "BATCH ISTATISTIK", bgcolor=color.new(color.teal, 30), text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, row, "", bgcolor=color.new(color.teal, 30))
+    table.merge_cells(dash, 0, row, 1, row)
+
+    row += 1
+    table.cell(dash, 0, row, "Toplam Batch", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(dash, 1, row, str.tostring(toplamBatch), text_color=color.white, text_size=size.small, text_halign=text.align_right)
+
+    winPct = toplamBatch > 0 ? kazancBatch / toplamBatch * 100 : 0
+    row += 1
+    table.cell(dash, 0, row, "Kazancli", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(dash, 1, row, str.tostring(kazancBatch) + " (%" + str.tostring(winPct, "#.0") + ")", text_color=color.green, text_size=size.small, text_halign=text.align_right)
+
+    losePct = toplamBatch > 0 ? kayipBatch / toplamBatch * 100 : 0
+    row += 1
+    table.cell(dash, 0, row, "Kayipli", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(dash, 1, row, str.tostring(kayipBatch) + " (%" + str.tostring(losePct, "#.0") + ")", text_color=color.red, text_size=size.small, text_halign=text.align_right)
+
+    row += 1
+    table.cell(dash, 0, row, "Toplam Sinyal", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(dash, 1, row, str.tostring(toplamSinyal), text_color=color.white, text_size=size.small, text_halign=text.align_right)
+
+    avgHisse = toplamBatch > 0 ? toplamSinyal / toplamBatch : 0
+    row += 1
+    table.cell(dash, 0, row, "Ort. Hisse/Batch", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(dash, 1, row, str.tostring(avgHisse, "#.#"), text_color=color.white, text_size=size.small, text_halign=text.align_right)
+
+    // --- PERFORMANS ---
+    row += 1
+    table.cell(dash, 0, row, "PERFORMANS", bgcolor=color.new(color.purple, 30), text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, row, "", bgcolor=color.new(color.purple, 30))
+    table.merge_cells(dash, 0, row, 1, row)
+
+    row += 1
+    table.cell(dash, 0, row, "Toplam Kar", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(dash, 1, row, "+" + str.tostring(toplamKar, "#,###") + " TL", text_color=color.green, text_size=size.small, text_halign=text.align_right)
+
+    row += 1
+    table.cell(dash, 0, row, "Toplam Zarar", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(dash, 1, row, str.tostring(toplamZarar, "#,###") + " TL", text_color=color.red, text_size=size.small, text_halign=text.align_right)
+
+    netKZ = toplamKar + toplamZarar
+    netRenk = netKZ >= 0 ? color.green : color.red
+    row += 1
+    table.cell(dash, 0, row, "Net K/Z", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(dash, 1, row, str.tostring(netKZ, "#,###") + " TL", text_color=netRenk, text_size=size.small, text_halign=text.align_right)
+
+    roi = toplamButce > 0 ? netKZ / toplamButce * 100 : 0
+    row += 1
+    table.cell(dash, 0, row, "ROI", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(dash, 1, row, "%" + str.tostring(roi, "#.##"), text_color=netRenk, text_size=size.small, text_halign=text.align_right)
+
+    profitFactor = toplamZarar != 0 ? math.abs(toplamKar / toplamZarar) : 0
+    row += 1
+    table.cell(dash, 0, row, "Profit Factor", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(dash, 1, row, str.tostring(profitFactor, "#.##"), text_color=profitFactor >= 1 ? color.green : color.red, text_size=size.small, text_halign=text.align_right)
+
+    row += 1
+    table.cell(dash, 0, row, "Max Drawdown", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(dash, 1, row, str.tostring(maxDrawdown, "#,###") + " TL", text_color=color.orange, text_size=size.small, text_halign=text.align_right)
+
+    row += 1
+    table.cell(dash, 0, row, "En Iyi Batch", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(dash, 1, row, "+" + str.tostring(enIyiBatch, "#,###") + " TL", text_color=color.green, text_size=size.small, text_halign=text.align_right)
+
+    row += 1
+    table.cell(dash, 0, row, "En Kotu Batch", text_color=color.white, text_size=size.small, text_halign=text.align_left)
+    table.cell(dash, 1, row, str.tostring(enKotuBatch, "#,###") + " TL", text_color=color.red, text_size=size.small, text_halign=text.align_right)
+
+    // --- SON BATCHLER ---
+    row += 1
+    table.cell(dash, 0, row, "SON BATCHLER", bgcolor=color.new(color.orange, 30), text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, row, "", bgcolor=color.new(color.orange, 30))
+    table.merge_cells(dash, 0, row, 1, row)
+
+    sonBatchGoster = math.min(sonBatchIdx, RING_SIZE)
+    if sonBatchGoster == 0
+        row += 1
+        table.cell(dash, 0, row, "—", text_color=color.gray, text_size=size.small, text_halign=text.align_left)
+        table.cell(dash, 1, row, "Henuz batch yok", text_color=color.gray, text_size=size.small, text_halign=text.align_right)
+    else
+        for k = 0 to sonBatchGoster - 1
+            ringI = (sonBatchIdx - 1 - k) % RING_SIZE
+            if ringI < 0
+                ringI += RING_SIZE
+            bKar   = array.get(sonBatchKar,   ringI)
+            bHisse = array.get(sonBatchHisse, ringI)
+            bYuzde = array.get(sonBatchYuzde, ringI)
+            bNo    = sonBatchIdx - k
+            bRenk  = bKar >= 0 ? color.green : color.red
+
+            row += 1
+            table.cell(dash, 0, row, "#" + str.tostring(bNo), text_color=color.white, text_size=size.small, text_halign=text.align_left)
+            table.cell(dash, 1, row, str.tostring(bHisse) + "h, " + str.tostring(bKar, "#,###") + " TL (" + str.tostring(bYuzde, "#.##") + "%)", text_color=bRenk, text_size=size.small, text_halign=text.align_right)

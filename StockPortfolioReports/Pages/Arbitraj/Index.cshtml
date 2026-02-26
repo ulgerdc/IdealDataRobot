@@ -1,0 +1,201 @@
+@page
+@model StockPortfolioReports.Pages.Arbitraj.IndexModel
+@{
+    ViewData["Title"] = "Arbitraj Dashboard";
+}
+
+<h2 class="mb-3">Arbitraj Dashboard</h2>
+
+<!-- Ozet kartlar -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-start border-primary border-4 shadow-sm">
+            <div class="card-body text-center">
+                <div class="fs-3 fw-bold text-primary">@Model.AktifConfigSayisi</div>
+                <small class="text-muted">Aktif Config</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-start border-warning border-4 shadow-sm">
+            <div class="card-body text-center">
+                <div class="fs-3 fw-bold text-warning">@Model.AcikPozisyonSayisi</div>
+                <small class="text-muted">Acik Pozisyon</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-start border-success border-4 shadow-sm">
+            <div class="card-body text-center">
+                <div class="fs-3 fw-bold @(Model.ToplamKar >= 0 ? "text-success" : "text-danger")">@Model.ToplamKar.ToString("N0") TL</div>
+                <small class="text-muted">Toplam Kar (Kapali)</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-start border-info border-4 shadow-sm">
+            <div class="card-body text-center">
+                <div class="fs-3 fw-bold text-info">@Model.ConfigDurumlari.Count</div>
+                <small class="text-muted">Izlenen Hisse</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Butce Durumu -->
+@{
+    var kalanButce = Model.GlobalButce - (double)Model.KullanilanButce;
+    var butceBarColor = Model.ButceYuzde > 80 ? "bg-danger" : Model.ButceYuzde > 60 ? "bg-warning" : "bg-success";
+}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0">Global Butce</h6>
+            <span class="fw-bold">@Model.GlobalButce.ToString("N0") TL</span>
+        </div>
+        <div class="row text-center mb-2">
+            <div class="col">
+                <small class="text-muted">Kullanilan</small>
+                <div class="fw-bold">@Model.KullanilanButce.ToString("N0") TL</div>
+            </div>
+            <div class="col">
+                <small class="text-muted">Kalan</small>
+                <div class="fw-bold @(kalanButce >= 0 ? "text-success" : "text-danger")">@kalanButce.ToString("N0") TL</div>
+            </div>
+            <div class="col">
+                <small class="text-muted">Kullanim</small>
+                <div class="fw-bold">%@Model.ButceYuzde.ToString("N1")</div>
+            </div>
+        </div>
+        <div class="progress" style="height: 10px;">
+            <div class="progress-bar @butceBarColor" style="width: @Math.Min(Model.ButceYuzde, 100).ToString("N0")%"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Son Spread Durumu -->
+<div class="row mb-4">
+    @foreach (var c in Model.ConfigDurumlari)
+    {
+        var tipLabel = c.ArbitrajTipi == 0 ? "Spot-VIOP" : "Takvim Spread";
+        var tipBadge = c.ArbitrajTipi == 0 ? "bg-primary" : "bg-info";
+        var netPrim = (double)(c.SonNetPrimYuzde ?? 0);
+        var progressPct = 0.0;
+        if (c.GirisMarji != c.CikisMarji)
+        {
+            progressPct = Math.Clamp((netPrim - c.CikisMarji) / (c.GirisMarji - c.CikisMarji) * 100, 0, 100);
+        }
+        var progressColor = progressPct > 70 ? "bg-success" : progressPct > 30 ? "bg-warning" : "bg-secondary";
+
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm @(c.AktifPozisyonVar ? "border-success border-2" : "")">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="card-title mb-0">@c.HisseAdi <span class="badge @tipBadge">@tipLabel</span></h5>
+                        @if (c.AktifPozisyonVar)
+                        {
+                            <span class="badge bg-success">POZISYON ACIK</span>
+                        }
+                    </div>
+
+                    @if (c.SonBacak1Fiyat.HasValue)
+                    {
+                        <div class="row text-center mb-2">
+                            <div class="col">
+                                <small class="text-muted">Bacak 1</small>
+                                <div class="fw-bold">@c.SonBacak1Fiyat.Value.ToString("N2")</div>
+                            </div>
+                            <div class="col">
+                                <small class="text-muted">Bacak 2</small>
+                                <div class="fw-bold">@c.SonBacak2Fiyat?.ToString("N2")</div>
+                            </div>
+                            <div class="col">
+                                <small class="text-muted">Spread</small>
+                                <div class="fw-bold">%@(c.SonSpreadYuzde?.ToString("N2"))</div>
+                            </div>
+                            <div class="col">
+                                <small class="text-muted">Adil</small>
+                                <div class="fw-bold">%@(c.SonAdilSpreadYuzde?.ToString("N2"))</div>
+                            </div>
+                            <div class="col">
+                                <small class="text-muted">Net Prim</small>
+                                <div class="fw-bold @(netPrim >= 0 ? "text-success" : "text-danger")">%@(netPrim.ToString("N2"))</div>
+                            </div>
+                            <div class="col">
+                                <small class="text-muted">Kalan Gun</small>
+                                <div class="fw-bold">@(c.SonKalanGun ?? 0)</div>
+                            </div>
+                        </div>
+
+                        <!-- Progress bar: CikisMarji -> GirisMarji -->
+                        <div class="mb-1">
+                            <div class="d-flex justify-content-between">
+                                <small>Cikis: %@c.CikisMarji.ToString("N1")</small>
+                                <small>Giris: %@c.GirisMarji.ToString("N1")</small>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar @progressColor" style="width: @progressPct.ToString("N0")%"></div>
+                            </div>
+                        </div>
+
+                        @if (c.AktifPozisyonVar)
+                        {
+                            <small class="text-muted">Giris Spread: %@(c.AktifPozGirisSpread?.ToString("N2"))</small>
+                        }
+
+                        <div class="text-end">
+                            <small class="text-muted">@(c.SonLogTarih?.ToString("dd.MM HH:mm"))</small>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Henuz spread verisi yok</p>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Spread Trendi Grafik -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <h6>Son 24 Saat Net Prim Trendi</h6>
+        <canvas id="spreadTrendiChart" height="80"></canvas>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    var data = @Html.Raw(Model.SpreadTrendiJson);
+    if (data.datasets && data.datasets.length > 0) {
+        var annotations = {};
+        if (data.girisMarji) {
+            annotations['girisLine'] = {
+                type: 'line', yMin: data.girisMarji, yMax: data.girisMarji,
+                borderColor: '#198754', borderDash: [5, 5], borderWidth: 1,
+                label: { display: true, content: 'Giris: %' + data.girisMarji, position: 'start', font: { size: 10 } }
+            };
+        }
+        if (data.cikisMarji !== undefined) {
+            annotations['cikisLine'] = {
+                type: 'line', yMin: data.cikisMarji, yMax: data.cikisMarji,
+                borderColor: '#dc3545', borderDash: [5, 5], borderWidth: 1,
+                label: { display: true, content: 'Cikis: %' + data.cikisMarji, position: 'start', font: { size: 10 } }
+            };
+        }
+        new Chart(document.getElementById('spreadTrendiChart'), {
+            type: 'line',
+            data: { datasets: data.datasets },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { type: 'category', title: { display: true, text: 'Saat' } },
+                    y: { title: { display: true, text: 'Net Prim %' } }
+                },
+                plugins: { legend: { position: 'top' } }
+            }
+        });
+    }
+</script>
+}

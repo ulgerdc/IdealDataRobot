@@ -1,0 +1,176 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<h2 class="mb-3">Dashboard</h2>
+
+<!-- Satir 1: Ozet Kartlar -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-subtitle text-muted">Toplam K/Z</h6>
+                <h3 class="@(Model.ToplamKar >= 0 ? "text-success" : "text-danger")">
+                    @Model.ToplamKar.ToString("N0") TL
+                </h3>
+                <small class="text-muted">
+                    Gerceklesmis: @Model.GerceklesmisKar.ToString("N0") | Potansiyel: @Model.PotansiyelKar.ToString("N0")
+                </small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-subtitle text-muted">Butce Kullanimi</h6>
+                <h3>%@Model.ButceYuzde.ToString("N1")</h3>
+                <div class="progress" style="height: 8px;">
+                    <div class="progress-bar @(Model.ButceYuzde > 80 ? "bg-danger" : Model.ButceYuzde > 60 ? "bg-warning" : "bg-success")"
+                         style="width: @Model.ButceYuzde.ToString("N0")%"></div>
+                </div>
+                <small class="text-muted">@Model.KullanilanButce.ToString("N0") / @Model.ToplamButce.ToString("N0")</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-subtitle text-muted">Acik Pozisyon</h6>
+                <h3>@Model.AcikPozisyonSayisi</h3>
+                <small class="text-muted">Toplam acik pozisyon sayisi</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-subtitle text-muted">Grid / Core</h6>
+                <h3>@Model.GridPozisyon / @Model.CorePozisyon</h3>
+                <small class="text-muted">Grid: @Model.GridTutar.ToString("N0") | Core: @Model.CoreTutar.ToString("N0")</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Satir 2: 2 Grafik yan yana -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6>Son 90 Gun - Kumulatif Kar</h6>
+                <canvas id="karTrendiChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6>Grid vs Core Sermaye</h6>
+                <canvas id="gridCoreChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Satir 3: Hisse bazli kar/zarar -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6>Hisse Bazli Acik Kar/Zarar</h6>
+                <canvas id="hisseKarChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Satir 4: Son islemler tablosu -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <h6>Son 10 Kapanan Islem</h6>
+        <table class="table table-sm table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Hisse</th>
+                    <th class="text-end">Lot</th>
+                    <th class="text-end">Alis</th>
+                    <th class="text-end">Satis</th>
+                    <th class="text-end">Kar</th>
+                    <th>Tarih</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in Model.SonIslemler)
+                {
+                    <tr>
+                        <td><a asp-page="/HisseDetay" asp-route-hisse="@t.HisseAdi">@t.HisseAdi</a></td>
+                        <td class="text-end">@t.Lot</td>
+                        <td class="text-end">@t.AlisFiyati.ToString("N2")</td>
+                        <td class="text-end">@t.SatisFiyati.ToString("N2")</td>
+                        <td class="text-end @(t.Kar >= 0 ? "text-success" : "text-danger")">@t.Kar.ToString("N2")</td>
+                        <td>@t.SatisTarihi.ToString("dd/MM/yyyy HH:mm")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    var karTrendi = @Html.Raw(Model.KarTrendiJson);
+    var gridCore = @Html.Raw(Model.GridCoreDagilimJson);
+    var hisseKar = @Html.Raw(Model.HisseKarJson);
+
+    // Kar trendi line chart
+    new Chart(document.getElementById('karTrendiChart'), {
+        type: 'line',
+        data: {
+            labels: karTrendi.labels,
+            datasets: [{
+                label: 'Kumulatif Kar (TL)',
+                data: karTrendi.data,
+                borderColor: '#198754',
+                backgroundColor: 'rgba(25,135,84,0.1)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+
+    // Grid vs Core doughnut
+    new Chart(document.getElementById('gridCoreChart'), {
+        type: 'doughnut',
+        data: {
+            labels: gridCore.labels,
+            datasets: [{
+                data: gridCore.data,
+                backgroundColor: ['#0d6efd', '#ffc107']
+            }]
+        },
+        options: { responsive: true }
+    });
+
+    // Hisse bazli bar chart
+    var hisseColors = hisseKar.data.map(v => v >= 0 ? '#198754' : '#dc3545');
+    new Chart(document.getElementById('hisseKarChart'), {
+        type: 'bar',
+        data: {
+            labels: hisseKar.labels,
+            datasets: [{
+                label: 'Acik K/Z (TL)',
+                data: hisseKar.data,
+                backgroundColor: hisseColors
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+</script>
+}

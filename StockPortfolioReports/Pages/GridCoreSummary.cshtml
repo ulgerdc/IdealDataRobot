@@ -1,0 +1,134 @@
+@page
+@model GridCoreSummaryModel
+@{
+    ViewData["Title"] = "Grid/Core Ayrimi";
+}
+
+<h2 class="mb-3">Grid / Core Ayrimi</h2>
+
+<!-- Ozet kartlar -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card border-start border-primary border-4 shadow-sm">
+            <div class="card-body">
+                <h6 class="text-primary">Grid Pozisyonlar</h6>
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="fw-bold">@Model.GridToplamLot</div>
+                        <small class="text-muted">Lot</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="fw-bold">@Model.GridToplamTutar.ToString("N0")</div>
+                        <small class="text-muted">Tutar</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="fw-bold @(Model.GridToplamKar >= 0 ? "text-success" : "text-danger")">@Model.GridToplamKar.ToString("N0")</div>
+                        <small class="text-muted">K/Z</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-start border-warning border-4 shadow-sm">
+            <div class="card-body">
+                <h6 class="text-warning">Core Pozisyonlar</h6>
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="fw-bold">@Model.CoreToplamLot</div>
+                        <small class="text-muted">Lot</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="fw-bold">@Model.CoreToplamTutar.ToString("N0")</div>
+                        <small class="text-muted">Tutar</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="fw-bold @(Model.CoreToplamKar >= 0 ? "text-success" : "text-danger")">@Model.CoreToplamKar.ToString("N0")</div>
+                        <small class="text-muted">K/Z</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Yas dagilimi grafik -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <h6>Pozisyon Yas Dagilimi</h6>
+        <canvas id="yasDagilimChart" height="100"></canvas>
+    </div>
+</div>
+
+<!-- Hisse bazli tablo -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <h6>Hisse Bazli Grid/Core</h6>
+        <div class="table-responsive">
+            <table class="table table-sm table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Hisse</th>
+                        <th class="text-end">Grid Lot</th>
+                        <th class="text-end">Core Lot</th>
+                        <th class="text-end">Grid Tutar</th>
+                        <th class="text-end">Core Tutar</th>
+                        <th class="text-end">Grid Ort.Maliyet</th>
+                        <th class="text-end">Core Ort.Maliyet</th>
+                        <th class="text-end">Grid K/Z</th>
+                        <th class="text-end">Core K/Z</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var h in Model.HisseBazli)
+                    {
+                        <tr>
+                            <td><a asp-page="/HisseDetay" asp-route-hisse="@h.HisseAdi">@h.HisseAdi</a></td>
+                            <td class="text-end">@h.GridLot</td>
+                            <td class="text-end">@h.CoreLot</td>
+                            <td class="text-end">@h.GridTutar.ToString("N0")</td>
+                            <td class="text-end">@h.CoreTutar.ToString("N0")</td>
+                            <td class="text-end">
+                                @if (h.GridOrtMaliyet > 0)
+                                {
+                                    @h.GridOrtMaliyet.ToString("N2")
+                                    var gridFark = h.PiyasaSatis > 0 ? (h.PiyasaSatis - h.GridOrtMaliyet) / h.GridOrtMaliyet * 100 : 0;
+                                    <span class="badge @(gridFark >= 0 ? "bg-success" : "bg-danger") ms-1">@(gridFark >= 0 ? "+" : "")@gridFark.ToString("N1")%</span>
+                                }
+                                else { <text>-</text> }
+                            </td>
+                            <td class="text-end">
+                                @if (h.CoreOrtMaliyet > 0)
+                                {
+                                    @h.CoreOrtMaliyet.ToString("N2")
+                                    var coreFark = h.PiyasaSatis > 0 ? (h.PiyasaSatis - h.CoreOrtMaliyet) / h.CoreOrtMaliyet * 100 : 0;
+                                    <span class="badge @(coreFark >= 0 ? "bg-success" : "bg-danger") ms-1">@(coreFark >= 0 ? "+" : "")@coreFark.ToString("N1")%</span>
+                                }
+                                else { <text>-</text> }
+                            </td>
+                            <td class="text-end @(h.GridKar >= 0 ? "text-success" : "text-danger")">@h.GridKar.ToString("N0")</td>
+                            <td class="text-end @(h.CoreKar >= 0 ? "text-success" : "text-danger")">@h.CoreKar.ToString("N0")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    var yas = @Html.Raw(Model.YasDagilimJson);
+    new Chart(document.getElementById('yasDagilimChart'), {
+        type: 'bar',
+        data: {
+            labels: yas.labels,
+            datasets: [
+                { label: 'Grid', data: yas.grid, backgroundColor: '#0d6efd' },
+                { label: 'Core', data: yas.core, backgroundColor: '#ffc107' }
+            ]
+        },
+        options: { responsive: true, scales: { x: { stacked: false }, y: { beginAtZero: true } } }
+    });
+</script>
+}

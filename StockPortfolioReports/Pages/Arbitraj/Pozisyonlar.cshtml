@@ -1,0 +1,122 @@
+@page
+@model StockPortfolioReports.Pages.Arbitraj.PozisyonlarModel
+@{
+    ViewData["Title"] = "Arbitraj Pozisyonlari";
+}
+
+<h2 class="mb-3">Arbitraj Pozisyonlari</h2>
+
+<!-- Ozet kartlar -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card border-start border-warning border-4 shadow-sm">
+            <div class="card-body">
+                <h6 class="text-warning">Acik Pozisyon</h6>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="fw-bold fs-4">@Model.AcikPozisyonSayisi</div>
+                        <small class="text-muted">Adet</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="fw-bold">@Model.AcikGirisTutari.ToString("N0") TL</div>
+                        <small class="text-muted">Giris Tutari</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-start border-success border-4 shadow-sm">
+            <div class="card-body">
+                <h6 class="text-success">Kapali Pozisyon</h6>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="fw-bold fs-4">@Model.KapaliPozisyonSayisi</div>
+                        <small class="text-muted">Adet</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="fw-bold @(Model.ToplamKar >= 0 ? "text-success" : "text-danger")">@Model.ToplamKar.ToString("N0") TL</div>
+                        <small class="text-muted">Toplam Kar</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-start border-info border-4 shadow-sm">
+            <div class="card-body">
+                <h6 class="text-info">Kazanc Orani</h6>
+                <div class="text-center">
+                    <div class="fw-bold fs-4">%@Model.KazancOrani.ToString("N1")</div>
+                    <small class="text-muted">Karli / Toplam Kapali</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pozisyon Tablosu -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Hisse</th>
+                        <th>Tip</th>
+                        <th>Bacak 1</th>
+                        <th class="text-end">Giris</th>
+                        <th class="text-end">Cikis</th>
+                        <th>Bacak 2</th>
+                        <th class="text-end">Giris</th>
+                        <th class="text-end">Cikis</th>
+                        <th class="text-end">Giris Spread</th>
+                        <th class="text-end">Cikis Spread</th>
+                        <th class="text-end">Kar</th>
+                        <th>Tarih</th>
+                        <th class="text-center">Durum</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model.Pozisyonlar)
+                    {
+                        var tipLabel = p.ArbitrajTipi == 0 ? "SV" : "TS";
+                        var rowClass = p.AktifMi ? "table-success" : "";
+                        <tr class="@rowClass">
+                            <td class="fw-bold">@p.HisseAdi</td>
+                            <td><span class="badge @(p.ArbitrajTipi == 0 ? "bg-primary" : "bg-info")">@tipLabel</span></td>
+                            <td><small>@p.Bacak1Sembol (@p.Bacak1Yon)</small></td>
+                            <td class="text-end">@p.Bacak1GirisFiyat.ToString("N2")</td>
+                            <td class="text-end">@(p.Bacak1CikisFiyat?.ToString("N2") ?? "-")</td>
+                            <td><small>@p.Bacak2Sembol (@p.Bacak2Yon)</small></td>
+                            <td class="text-end">@p.Bacak2GirisFiyat.ToString("N2")</td>
+                            <td class="text-end">@(p.Bacak2CikisFiyat?.ToString("N2") ?? "-")</td>
+                            <td class="text-end">%@p.GirisSpreadYuzde.ToString("N2")</td>
+                            <td class="text-end">@(p.CikisSpreadYuzde.HasValue ? "%" + p.CikisSpreadYuzde.Value.ToString("N2") : "-")</td>
+                            <td class="text-end @(p.Kar > 0 ? "text-success" : p.Kar < 0 ? "text-danger" : "")">
+                                @(p.Kar.HasValue ? p.Kar.Value.ToString("N0") + " TL" : "-")
+                            </td>
+                            <td>@p.PozisyonTarihi.ToString("dd.MM.yyyy")</td>
+                            <td class="text-center">
+                                @if (p.AktifMi)
+                                {
+                                    <span class="badge bg-success">Acik</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Kapali</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Pozisyonlar.Any())
+                    {
+                        <tr>
+                            <td colspan="13" class="text-center text-muted py-4">Henuz pozisyon bulunmuyor</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

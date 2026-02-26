@@ -1,0 +1,489 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Grid + Core Hibrit Strateji Backtest
+// Otomatik Mod: ADX+DI ile piyasa rejimi algilama
+
+//@version=5
+strategy("Grid Hibrit Strateji Backtest", overlay=true, initial_capital=100000,
+     default_qty_type=strategy.cash, default_qty_value=5000,
+     commission_type=strategy.commission.percent, commission_value=0.15,
+     pyramiding=500, process_orders_on_close=true)
+
+// ==================== PARAMETRELER ====================
+grp_date    = "Backtest Tarih Araligi"
+grp_auto    = "Otomatik Mod (ADX+DI)"
+grp_grid    = "Grid Ayarlari"
+grp_core    = "Core (Uzun Vade) Ayarlari"
+grp_time    = "Zaman Bazli Marj Indirimi"
+grp_budget  = "Butce Yonetimi"
+grp_toggle  = "Manuel Togglelar (Otomatik Mod kapaliyken)"
+
+// Tarih araligi
+startDate   = input.time(timestamp("2024-02-22 00:00 +0300"), "Baslangic Tarihi", group=grp_date)
+endDate     = input.time(timestamp("2026-02-22 23:59 +0300"), "Bitis Tarihi",     group=grp_date)
+
+// Otomatik Mod
+useAutoMode     = input.bool(true,   "Otomatik Mod Aktif",              group=grp_auto)
+adxPeriod       = input.int(14,      "ADX Periyodu",    minval=5, maxval=50, step=1, group=grp_auto)
+adxTrendThresh  = input.float(25.0,  "Trend Esigi (ADX >)",  minval=15, maxval=40, step=1, group=grp_auto)
+adxSidewayThresh= input.float(20.0,  "Yatay Esigi (ADX <)",  minval=10, maxval=30, step=1, group=grp_auto)
+
+// Grid parametreleri
+gridMarginBinde = input.float(7.0,   "Grid Marj (binde) [Sabit mod]", minval=1.0, maxval=50.0, step=0.5, group=grp_grid)
+useATR          = input.bool(false,  "ATR Bazli Grid Araligi [Manuel]",group=grp_grid)
+atrTimeframe    = input.string("D",  "ATR Zaman Dilimi", options=["D", "W"], group=grp_grid)
+atrPeriod       = input.int(14,      "ATR Periyodu",           minval=5, maxval=50, step=1, group=grp_grid)
+atrMultiplier   = input.float(0.5,   "ATR Carpani",            minval=0.1, maxval=3.0, step=0.1, group=grp_grid)
+buyAmount       = input.float(5000,  "Alim Tutari (TL)",      minval=100, maxval=50000, step=500, group=grp_grid)
+totalBudget     = input.float(100000,"Toplam Butce (TL)",     minval=10000, maxval=1000000, step=10000, group=grp_grid)
+
+// Core parametreleri
+coreRatio       = input.float(15.0,  "Core Orani (%)",        minval=0, maxval=80, step=5, group=grp_core)
+coreTargetBinde = input.float(100.0, "Core Hedef (binde=%10)",minval=10, maxval=500, step=10, group=grp_core)
+trailingStopPct = input.float(5.0,   "Trailing Stop (%)",     minval=1.0, maxval=20.0, step=0.5, group=grp_core)
+
+// Zaman bazli
+timeDecayStart  = input.int(30,      "Marj Indirimi Baslangic (gun)", minval=10, maxval=90, step=5, group=grp_time)
+
+// Butce
+budgetLimitPct  = input.float(80.0,  "Butce Hard Limiti (%)", minval=20, maxval=100, step=5, group=grp_budget)
+
+// Manuel togglelar (otomatik mod kapaliyken kullanilir)
+manualCore       = input.bool(true,   "Core Birikimi",           group=grp_toggle)
+manualTimeDecay  = input.bool(true,   "Zaman Bazli Marj Indirimi", group=grp_toggle)
+manualBudgetLimit= input.bool(true,   "Butce Hard Limiti",       group=grp_toggle)
+
+// ==================== TARIH FILTRESI ====================
+bool inDateRange = time >= startDate and time <= endDate
+bgcolor(not inDateRange ? color.new(color.gray, 95) : na)
+
+// ==================== ATR HESAPLAMA ====================
+atrDaily  = ta.atr(atrPeriod)
+atrWeekly = request.security(syminfo.tickerid, "W", ta.atr(atrPeriod))
+atrValue  = atrTimeframe == "W" ? atrWeekly : atrDaily
+
+// ==================== ADX + DI HESAPLAMA (KOMBINE) ====================
+// Hisse ADX+DI
+[diPlus, diMinus, adxVal] = ta.dmi(adxPeriod, adxPeriod)
+
+// Endeks (XU030) yon tespiti — EMA8/EMA21 ile
+indexSymbol = "BIST:XU030"
+indexEma8   = request.security(indexSymbol, "D", ta.ema(close, 8))
+indexEma21  = request.security(indexSymbol, "D", ta.ema(close, 21))
+bool indexBullish = indexEma8 > indexEma21
+bool indexBearish = indexEma8 < indexEma21
+
+// Hisse rejimi (ADX bazli)
+bool hisseTrending  = adxVal >= adxTrendThresh
+bool hisseSideway   = adxVal <= adxSidewayThresh
+bool hisseTransition= not hisseTrending and not hisseSideway
+
+bool hisseBullish   = diPlus > diMinus
+bool hisseBearish   = diMinus > diPlus
+
+// KOMBINE REJIM ALGILAMA v2
+// 3 duzeltme uygulanmis:
+// 1. Hisse ADX dusukse (yatay) → endeks ne olursa olsun YATAY rejimi
+// 2. Endeks dususteyse → hisse yukseliste bile en fazla GECIS
+// 3. Endeks yukseliste ama hisse dususte → DUSUS_HAFIF (GECIS degil)
+
+var int regime = 0  // 0=Yatay, 1=Yukselis, 2=Dusus, 3=Gecis
+
+if useAutoMode
+    // KURAL 1: Hisse yataysa (ADX < 20) → saf grid modu
+    if hisseSideway
+        if indexBearish
+            regime := 3      // GECIS: Hisse yatay ama endeks kotu, dikkatli ol
+        else
+            regime := 0      // YATAY: Hisse yatay, endeks iyi/notr → saf grid
+
+    // KURAL 2: Endeks dususteyse → en iyi ihtimalle GECIS
+    else if indexBearish
+        if hisseTrending and hisseBullish
+            regime := 3      // GECIS: Hisse guclu ama endeks kotu
+        else
+            regime := 2      // DUSUS: Endeks kotu + hisse de zayif/dususte
+
+    // KURAL 3: Endeks yukseliste
+    else if indexBullish
+        if hisseTrending and hisseBearish
+            regime := 2      // DUSUS_HAFIF: Endeks iyi ama hisse dusuyor → koruma
+        else if hisseTransition
+            regime := 3      // GECIS: Endeks iyi, hisse kararsiz
+        else
+            regime := 1      // YUKSELIS: Endeks iyi + hisse iyi/yatay
+
+    // Endeks notr
+    else
+        if hisseTrending and hisseBullish
+            regime := 1      // YUKSELIS: Hisse guclu
+        else if hisseTrending and hisseBearish
+            regime := 2      // DUSUS: Hisse zayif
+        else
+            regime := 0      // YATAY: Her sey belirsiz
+
+// Rejim sayaclari
+var int regimeSidewayCount  = 0
+var int regimeBullishCount  = 0
+var int regimeBearishCount  = 0
+var int regimeTransitCount  = 0
+
+if useAutoMode and inDateRange
+    if regime == 0
+        regimeSidewayCount += 1
+    else if regime == 1
+        regimeBullishCount += 1
+    else if regime == 2
+        regimeBearishCount += 1
+    else
+        regimeTransitCount += 1
+
+// ==================== OTOMATIK MOD AYARLARI ====================
+// Rejime gore strateji parametrelerini belirle
+bool activeCore       = manualCore
+bool activeTimeDecay  = manualTimeDecay
+bool activeBudgetLimit= manualBudgetLimit
+bool activeATR        = useATR
+float activeBuyMult   = 1.0   // Alim tutari carpani
+
+if useAutoMode
+    if regime == 0      // YATAY: Saf grid modu — max dongu hizi
+        activeCore       := false
+        activeTimeDecay  := true
+        activeBudgetLimit:= false
+        activeATR        := false
+        activeBuyMult    := 1.0
+    else if regime == 1  // YUKSELIS: Hibrit sabit — core birikim aktif
+        activeCore       := true
+        activeTimeDecay  := true
+        activeBudgetLimit:= true
+        activeATR        := false
+        activeBuyMult    := 1.0
+    else if regime == 2  // DUSUS: ATR + koruma — sermaye koru
+        activeCore       := false
+        activeTimeDecay  := true
+        activeBudgetLimit:= true
+        activeATR        := true
+        activeBuyMult    := 0.5   // Yarim lot al
+    else                 // GECIS: Hafif hibrit
+        activeCore       := true
+        activeTimeDecay  := true
+        activeBudgetLimit:= true
+        activeATR        := false
+        activeBuyMult    := 0.75
+
+// ==================== DEGISKENLER ====================
+var float[] gridEntryPrices   = array.new_float(0)
+var int[]   gridEntryBars     = array.new_int(0)
+var float[] gridLots          = array.new_float(0)
+
+var float[] coreEntryPrices   = array.new_float(0)
+var float[] corePeakPrices    = array.new_float(0)
+var float[] coreLots          = array.new_float(0)
+
+var float gridTotalProfit     = 0.0
+var float coreTotalProfit     = 0.0
+var int   gridTradeCount      = 0
+var int   coreTradeCount      = 0
+var float totalInvested       = 0.0
+var int   gridSellCount       = 0
+var int   coreSellCount       = 0
+var int   timeDecaySellCount  = 0
+var int   budgetBlockCount    = 0
+var int   bearishBlockCount   = 0
+
+currentPrice = close
+
+// ==================== YARDIMCI FONKSIYONLAR ====================
+
+// Marj hesapla: Sabit veya ATR bazli (rejime gore)
+calcMargin(float price) =>
+    if activeATR
+        atrValue * atrMultiplier
+    else
+        (gridMarginBinde / 1000.0) * price
+
+// Toplam yatirim hesapla
+calcTotalInvested() =>
+    float total = 0.0
+    for i = 0 to (array.size(gridEntryPrices) > 0 ? array.size(gridEntryPrices) - 1 : na)
+        total += array.get(gridEntryPrices, i) * array.get(gridLots, i)
+    for i = 0 to (array.size(coreEntryPrices) > 0 ? array.size(coreEntryPrices) - 1 : na)
+        total += array.get(coreEntryPrices, i) * array.get(coreLots, i)
+    total
+
+// Zaman bazli marj carpani
+timeDecayMultiplier(int barsHeld) =>
+    int daysHeld = int(barsHeld)
+    float mult = 1.0
+    if activeTimeDecay
+        if daysHeld >= 120
+            mult := 0.0
+        else if daysHeld >= 90
+            mult := 0.25
+        else if daysHeld >= 60
+            mult := 0.50
+        else if daysHeld >= timeDecayStart
+            mult := 0.75
+    mult
+
+// ==================== ANA STRATEJI MANTIGI ====================
+if inDateRange
+
+    // --- SATIS KONTROLLERI ---
+
+    // Katman 1: Grid Satis + Core Ayirimi
+    if array.size(gridEntryPrices) > 0
+        float margin = calcMargin(currentPrice)
+        int i = array.size(gridEntryPrices) - 1
+        while i >= 0
+            float entryPrice = array.get(gridEntryPrices, i)
+            float lots = array.get(gridLots, i)
+
+            if currentPrice >= entryPrice + margin
+                float profit = lots * (currentPrice - entryPrice)
+
+                if activeCore and coreRatio > 0
+                    float gridSellLots = lots * (100.0 - coreRatio) / 100.0
+                    float coreSellLots = lots * coreRatio / 100.0
+
+                    float gridProfit = gridSellLots * (currentPrice - entryPrice)
+                    gridTotalProfit += gridProfit
+                    gridSellCount += 1
+
+                    if coreSellLots > 0
+                        array.push(coreEntryPrices, entryPrice)
+                        array.push(corePeakPrices, currentPrice)
+                        array.push(coreLots, coreSellLots)
+
+                    strategy.close("Grid_" + str.tostring(i), comment="Grid+Core")
+                else
+                    gridTotalProfit += profit
+                    gridSellCount += 1
+                    strategy.close("Grid_" + str.tostring(i), comment="Grid Satis")
+
+                gridTradeCount += 1
+                array.remove(gridEntryPrices, i)
+                array.remove(gridEntryBars, i)
+                array.remove(gridLots, i)
+
+            i -= 1
+
+    // Katman 2: Zaman bazli marj indirimi
+    if activeTimeDecay and array.size(gridEntryPrices) > 0
+        float margin = calcMargin(currentPrice)
+        int i = array.size(gridEntryPrices) - 1
+        while i >= 0
+            float entryPrice = array.get(gridEntryPrices, i)
+            float lots = array.get(gridLots, i)
+            int entryBar = array.get(gridEntryBars, i)
+            int barsHeld = bar_index - entryBar
+
+            if barsHeld >= timeDecayStart
+                float decayMult = timeDecayMultiplier(barsHeld)
+                float adjustedMargin = margin * decayMult
+
+                if currentPrice >= entryPrice + adjustedMargin
+                    float profit = lots * (currentPrice - entryPrice)
+                    gridTotalProfit += profit
+                    gridTradeCount += 1
+                    timeDecaySellCount += 1
+
+                    strategy.close("Grid_" + str.tostring(i), comment="TimeDecay " + str.tostring(barsHeld) + "d")
+
+                    array.remove(gridEntryPrices, i)
+                    array.remove(gridEntryBars, i)
+                    array.remove(gridLots, i)
+
+            i -= 1
+
+    // Katman 3: Core pozisyon cikisi
+    if activeCore and array.size(coreEntryPrices) > 0
+        int i = array.size(coreEntryPrices) - 1
+        while i >= 0
+            float entryPrice = array.get(coreEntryPrices, i)
+            float peakPrice = array.get(corePeakPrices, i)
+            float lots = array.get(coreLots, i)
+
+            bool shouldSell = false
+
+            float targetPrice = entryPrice * (1.0 + coreTargetBinde / 1000.0)
+            if currentPrice >= targetPrice
+                shouldSell := true
+
+            float trailStopPrice = peakPrice * (1.0 - trailingStopPct / 100.0)
+            if currentPrice <= trailStopPrice and peakPrice > entryPrice * 1.01
+                shouldSell := true
+
+            if shouldSell
+                float profit = lots * (currentPrice - entryPrice)
+                coreTotalProfit += profit
+                coreTradeCount += 1
+                coreSellCount += 1
+
+                array.remove(coreEntryPrices, i)
+                array.remove(corePeakPrices, i)
+                array.remove(coreLots, i)
+
+            i -= 1
+
+    // Katman 4: Core tepe guncelle
+    if activeCore and array.size(corePeakPrices) > 0
+        for i = 0 to array.size(corePeakPrices) - 1
+            if currentPrice > array.get(corePeakPrices, i)
+                array.set(corePeakPrices, i, currentPrice)
+
+    // --- ALIS KONTROLLERI ---
+    float currentInvested = calcTotalInvested()
+    float budgetUsagePct = (currentInvested / totalBudget) * 100.0
+
+    bool budgetOk = true
+    if activeBudgetLimit and budgetUsagePct >= budgetLimitPct
+        budgetOk := false
+        budgetBlockCount += 1
+
+    bool priceOk = true
+    float margin = calcMargin(currentPrice)
+    if array.size(gridEntryPrices) > 0
+        for i = 0 to array.size(gridEntryPrices) - 1
+            float existingPrice = array.get(gridEntryPrices, i)
+            if math.abs(currentPrice - existingPrice) < margin
+                priceOk := false
+                break
+
+    // Dusus rejiminde alim kisitlamasi
+    bool bearishOk = true
+    if useAutoMode and regime == 2 and activeBuyMult <= 0.0
+        bearishOk := false
+        bearishBlockCount += 1
+
+    if budgetOk and priceOk and bearishOk
+        float adjustedBuyAmount = buyAmount * activeBuyMult
+        float lots = math.floor(adjustedBuyAmount / currentPrice)
+        if lots > 0
+            strategy.entry("Grid_" + str.tostring(array.size(gridEntryPrices)), strategy.long,
+                 qty=lots, comment="Grid Alis")
+
+            array.push(gridEntryPrices, currentPrice)
+            array.push(gridEntryBars, bar_index)
+            array.push(gridLots, lots)
+            totalInvested += lots * currentPrice
+
+// Backtest bitis
+if time > endDate and time[1] <= endDate
+    strategy.close_all(comment="Backtest Sonu")
+
+// ==================== DASHBOARD ====================
+var table dashboard = table.new(position.top_right, 2, 20, bgcolor=color.new(color.black, 80), border_width=1)
+
+if barstate.islastconfirmedhistory or barstate.isrealtime
+    float unrealizedPnL = 0.0
+    float gridOpenValue = 0.0
+    for i = 0 to (array.size(gridEntryPrices) > 0 ? array.size(gridEntryPrices) - 1 : na)
+        float ep = array.get(gridEntryPrices, i)
+        float lt = array.get(gridLots, i)
+        unrealizedPnL += lt * (currentPrice - ep)
+        gridOpenValue += lt * ep
+
+    float coreOpenValue = 0.0
+    float coreUnrealized = 0.0
+    for i = 0 to (array.size(coreEntryPrices) > 0 ? array.size(coreEntryPrices) - 1 : na)
+        float ep = array.get(coreEntryPrices, i)
+        float lt = array.get(coreLots, i)
+        coreUnrealized += lt * (currentPrice - ep)
+        coreOpenValue += lt * ep
+
+    float totalOpenValue = gridOpenValue + coreOpenValue
+    float totalRealized = gridTotalProfit + coreTotalProfit
+    float totalPnL = totalRealized + unrealizedPnL + coreUnrealized
+
+    // Rejim bilgisi
+    string regimeText = regime == 0 ? "YATAY (Saf Grid)" : regime == 1 ? "YUKSELIS (Hibrit)" : regime == 2 ? "DUSUS (ATR Koruma)" : "GECIS (Hafif Hibrit)"
+    color regimeColor = regime == 0 ? color.white : regime == 1 ? color.lime : regime == 2 ? color.red : color.yellow
+
+    table.cell(dashboard, 0, 0, "Backtest", text_color=color.silver, text_size=size.small)
+    table.cell(dashboard, 1, 0, str.format("{0,date,dd.MM.yy} - {1,date,dd.MM.yy}", startDate, endDate), text_color=color.silver, text_size=size.small)
+
+    // Aktif rejim
+    table.cell(dashboard, 0, 1, "Aktif Rejim", text_color=color.white, text_size=size.small)
+    table.cell(dashboard, 1, 1, useAutoMode ? regimeText : "MANUEL", text_color=useAutoMode ? regimeColor : color.gray, text_size=size.small)
+
+    // ADX bilgisi (hisse + endeks)
+    string indexDir = indexBullish ? "YUK" : indexBearish ? "DUS" : "NOTR"
+    string hisseDir = hisseBullish ? "YUK" : hisseBearish ? "DUS" : "NOTR"
+    table.cell(dashboard, 0, 2, "Endeks / Hisse", text_color=color.silver, text_size=size.small)
+    table.cell(dashboard, 1, 2, "XU030:" + indexDir + " | Hisse:ADX " + str.tostring(adxVal, "#.#") + " " + hisseDir, text_color=color.silver, text_size=size.small)
+
+    // Rejim dagilimi
+    int totalBars = regimeSidewayCount + regimeBullishCount + regimeBearishCount + regimeTransitCount
+    table.cell(dashboard, 0, 3, "Rejim Dagilimi", text_color=color.silver, text_size=size.small)
+    string distText = totalBars > 0 ? "Y:" + str.tostring(regimeSidewayCount) + " U:" + str.tostring(regimeBullishCount) + " D:" + str.tostring(regimeBearishCount) + " G:" + str.tostring(regimeTransitCount) : "-"
+    table.cell(dashboard, 1, 3, distText, text_color=color.silver, text_size=size.small)
+
+    // Grid
+    table.cell(dashboard, 0, 4, "Grid Kar", text_color=color.lime, text_size=size.small)
+    table.cell(dashboard, 1, 4, str.tostring(gridTotalProfit, "#.##") + " TL (" + str.tostring(gridSellCount) + " satis)", text_color=color.lime, text_size=size.small)
+
+    table.cell(dashboard, 0, 5, "Grid Acik Poz", text_color=color.yellow, text_size=size.small)
+    table.cell(dashboard, 1, 5, str.tostring(array.size(gridEntryPrices)) + " (" + str.tostring(gridOpenValue, "#") + " TL)", text_color=color.yellow, text_size=size.small)
+
+    // Core
+    table.cell(dashboard, 0, 6, "Core Kar", text_color=color.aqua, text_size=size.small)
+    table.cell(dashboard, 1, 6, str.tostring(coreTotalProfit, "#.##") + " TL (" + str.tostring(coreSellCount) + " satis)", text_color=color.aqua, text_size=size.small)
+
+    table.cell(dashboard, 0, 7, "Core Acik Poz", text_color=color.aqua, text_size=size.small)
+    table.cell(dashboard, 1, 7, str.tostring(array.size(coreEntryPrices)) + " (" + str.tostring(coreOpenValue, "#") + " TL)", text_color=color.aqua, text_size=size.small)
+
+    // Zaman Bazli
+    table.cell(dashboard, 0, 8, "Zaman Bazli Satis", text_color=color.orange, text_size=size.small)
+    table.cell(dashboard, 1, 8, str.tostring(timeDecaySellCount), text_color=color.orange, text_size=size.small)
+
+    // Butce
+    table.cell(dashboard, 0, 9, "Butce Kullanimi", text_color=color.white, text_size=size.small)
+    float usagePct = totalOpenValue / totalBudget * 100
+    color budgetColor = usagePct >= budgetLimitPct ? color.red : (usagePct >= budgetLimitPct * 0.8 ? color.orange : color.green)
+    table.cell(dashboard, 1, 9, str.tostring(usagePct, "#.#") + "% (" + str.tostring(totalOpenValue, "#") + " TL)", text_color=budgetColor, text_size=size.small)
+
+    table.cell(dashboard, 0, 10, "Butce Engeli", text_color=color.red, text_size=size.small)
+    table.cell(dashboard, 1, 10, str.tostring(budgetBlockCount), text_color=color.red, text_size=size.small)
+
+    // Ozet
+    table.cell(dashboard, 0, 11, "Toplam Gerceklesen", text_color=color.white, text_size=size.small)
+    table.cell(dashboard, 1, 11, str.tostring(totalRealized, "#.##") + " TL", text_color=totalRealized >= 0 ? color.lime : color.red, text_size=size.small)
+
+    table.cell(dashboard, 0, 12, "Gerceklesmemis K/Z", text_color=color.white, text_size=size.small)
+    float totalUnrealized = unrealizedPnL + coreUnrealized
+    table.cell(dashboard, 1, 12, str.tostring(totalUnrealized, "#.##") + " TL", text_color=totalUnrealized >= 0 ? color.lime : color.red, text_size=size.small)
+
+    table.cell(dashboard, 0, 13, "Net K/Z", text_color=color.white, text_size=size.small)
+    table.cell(dashboard, 1, 13, str.tostring(totalPnL, "#.##") + " TL", text_color=totalPnL >= 0 ? color.lime : color.red, text_size=size.small)
+
+    float roi = totalPnL / totalBudget * 100
+    table.cell(dashboard, 0, 14, "ROI (%)", text_color=color.white, text_size=size.small)
+    table.cell(dashboard, 1, 14, str.tostring(roi, "#.##") + "%", text_color=roi >= 0 ? color.lime : color.red, text_size=size.small)
+
+    // Marj bilgisi
+    float currentMargin = calcMargin(currentPrice)
+    float marginBinde = currentMargin / currentPrice * 1000
+    string marginMode = activeATR ? "ATR" + atrTimeframe + "(" + str.tostring(atrPeriod) + ") x" + str.tostring(atrMultiplier, "#.#") : "Sabit " + str.tostring(gridMarginBinde, "#.#") + " binde"
+    table.cell(dashboard, 0, 15, "Grid Marj", text_color=color.silver, text_size=size.small)
+    table.cell(dashboard, 1, 15, marginMode + " = " + str.tostring(currentMargin, "#.##") + " TL", text_color=color.silver, text_size=size.small)
+
+    // Aktif ozellikler
+    string features = (activeCore ? "Core " : "") + (activeATR ? "ATR " : "") + (activeBudgetLimit ? "Butce " : "") + (activeTimeDecay ? "Zaman " : "")
+    table.cell(dashboard, 0, 16, "Aktif Ozellikler", text_color=color.silver, text_size=size.small)
+    table.cell(dashboard, 1, 16, features == "" ? "Saf Grid" : features, text_color=color.silver, text_size=size.small)
+
+    // Alim carpani
+    table.cell(dashboard, 0, 17, "Alim Carpani", text_color=color.silver, text_size=size.small)
+    table.cell(dashboard, 1, 17, str.tostring(activeBuyMult * 100, "#") + "% (" + str.tostring(bearishBlockCount) + " dusus engeli)", text_color=activeBuyMult < 1 ? color.orange : color.white, text_size=size.small)
+
+// ==================== GORSEL ISARETLER ====================
+// Rejim renklendirme (arka plan)
+color regimeBg = na
+if useAutoMode and inDateRange
+    regimeBg := regime == 0 ? color.new(color.white, 97) : regime == 1 ? color.new(color.green, 95) : regime == 2 ? color.new(color.red, 93) : color.new(color.yellow, 95)
+bgcolor(regimeBg)
+
+// ATR bandi
+plot(activeATR and inDateRange ? close + atrValue * atrMultiplier : na, "ATR Ust", color=color.new(color.green, 70), style=plot.style_stepline)
+plot(activeATR and inDateRange ? close - atrValue * atrMultiplier : na, "ATR Alt", color=color.new(color.red, 70), style=plot.style_stepline)

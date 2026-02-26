@@ -1,0 +1,198 @@
+@page
+@model StockPortfolioReports.Pages.GunlukRaporModel
+@{
+    ViewData["Title"] = "Gunluk Rapor";
+}
+
+<h4>Gunluk Rapor</h4>
+
+<!-- Filtreler -->
+<form method="get" class="row g-3 mb-4">
+    <div class="col-auto">
+        <label class="form-label">Tarih</label>
+        <input type="date" class="form-control" name="Tarih"
+               value="@(Model.Tarih?.ToString("yyyy-MM-dd"))" />
+    </div>
+    <div class="col-auto">
+        <label class="form-label">Hisse</label>
+        <select class="form-select" name="HisseFiltre">
+            <option value="">Tumu</option>
+            @foreach (var h in Model.HisseListesi)
+            {
+                <option value="@h" selected="@(Model.HisseFiltre == h)">@h</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto d-flex align-items-end">
+        <button type="submit" class="btn btn-primary">Filtrele</button>
+    </div>
+</form>
+
+<!-- Ozet Kartlari -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white @(Model.NetKarZarar >= 0 ? "bg-success" : "bg-danger")">
+            <div class="card-body">
+                <h6 class="card-title">Net K/Z</h6>
+                <h4>@Model.NetKarZarar.ToString("N2") TL</h4>
+                <small>@Model.SatisAdet kapanan islem</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h6 class="card-title">Alis</h6>
+                <h4>@Model.AlisAdet adet</h4>
+                <small>@Model.AlisToplam.ToString("N0") TL</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body">
+                <h6 class="card-title">Satis</h6>
+                <h4>@Model.SatisAdet adet</h4>
+                <small>@Model.SatisToplam.ToString("N0") TL</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-dark">
+            <div class="card-body">
+                <h6 class="card-title">Hacim</h6>
+                <h4>@Model.Hacim.ToString("N0") TL</h4>
+                <small>Alis + Satis toplami</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hisse Bazli Tablo -->
+<div class="card mb-4">
+    <div class="card-header">
+        <strong>Hisse Bazli Detay</strong> — @(Model.Tarih?.ToString("dd.MM.yyyy"))
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-striped table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Hisse</th>
+                    <th class="text-end">Alis Adet</th>
+                    <th class="text-end">Alis Lot</th>
+                    <th class="text-end">Alis Tutari</th>
+                    <th class="text-end">Satis Adet</th>
+                    <th class="text-end">Satis Lot</th>
+                    <th class="text-end">Satis Tutari</th>
+                    <th class="text-end">Kar</th>
+                    <th class="text-end">Zarar</th>
+                    <th class="text-end">Net K/Z</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var h in Model.HisseDetaylari)
+                {
+                    <tr>
+                        <td><strong>@h.HisseAdi</strong></td>
+                        <td class="text-end">@h.AlisAdet</td>
+                        <td class="text-end">@h.AlisLot</td>
+                        <td class="text-end">@h.AlisTutari.ToString("N0")</td>
+                        <td class="text-end">@h.SatisAdet</td>
+                        <td class="text-end">@h.SatisLot</td>
+                        <td class="text-end">@h.SatisTutari.ToString("N0")</td>
+                        <td class="text-end text-success">@h.Kar.ToString("N2")</td>
+                        <td class="text-end text-danger">@h.Zarar.ToString("N2")</td>
+                        <td class="text-end @(h.NetKZ >= 0 ? "text-success" : "text-danger")">
+                            <strong>@h.NetKZ.ToString("N2")</strong>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            @if (Model.HisseDetaylari.Any())
+            {
+                <tfoot class="table-dark">
+                    <tr>
+                        <td><strong>TOPLAM</strong></td>
+                        <td class="text-end">@Model.HisseDetaylari.Sum(h => h.AlisAdet)</td>
+                        <td class="text-end">@Model.HisseDetaylari.Sum(h => h.AlisLot)</td>
+                        <td class="text-end">@Model.HisseDetaylari.Sum(h => h.AlisTutari).ToString("N0")</td>
+                        <td class="text-end">@Model.HisseDetaylari.Sum(h => h.SatisAdet)</td>
+                        <td class="text-end">@Model.HisseDetaylari.Sum(h => h.SatisLot)</td>
+                        <td class="text-end">@Model.HisseDetaylari.Sum(h => h.SatisTutari).ToString("N0")</td>
+                        <td class="text-end text-success">@Model.HisseDetaylari.Sum(h => h.Kar).ToString("N2")</td>
+                        <td class="text-end text-danger">@Model.HisseDetaylari.Sum(h => h.Zarar).ToString("N2")</td>
+                        <td class="text-end">
+                            <strong class="@(Model.NetKarZarar >= 0 ? "text-success" : "text-danger")">
+                                @Model.NetKarZarar.ToString("N2")
+                            </strong>
+                        </td>
+                    </tr>
+                </tfoot>
+            }
+        </table>
+        @if (!Model.HisseDetaylari.Any())
+        {
+            <div class="text-center text-muted py-4">Bu tarihte islem bulunamadi.</div>
+        }
+    </div>
+</div>
+
+<!-- Bar Chart -->
+@if (Model.HisseDetaylari.Any(h => h.Kar != 0 || h.Zarar != 0))
+{
+    <div class="card mb-4">
+        <div class="card-header"><strong>Kar / Zarar Dagilimi</strong></div>
+        <div class="card-body">
+            <canvas id="karZararChart" height="100"></canvas>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        var chartData = @Html.Raw(Model.KarZararJson);
+        if (chartData.labels && chartData.labels.length > 0) {
+            new Chart(document.getElementById('karZararChart'), {
+                type: 'bar',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [
+                        {
+                            label: 'Kar',
+                            data: chartData.karData,
+                            backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                            borderColor: 'rgba(40, 167, 69, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Zarar',
+                            data: chartData.zararData,
+                            backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                            borderColor: 'rgba(220, 53, 69, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(v) { return v.toLocaleString('tr-TR') + ' TL'; }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    return ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString('tr-TR') + ' TL';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+}

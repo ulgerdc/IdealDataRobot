@@ -1,0 +1,30 @@
+﻿@page
+@model DailySummaryModel
+
+<h2>Günlük Hisse Özeti</h2>
+
+<table class="table table-bordered">
+    <thead class="table-dark">
+        <tr>
+            <th>Tarih</th>
+            <th>Hisse Adı</th>
+            <th>Toplam Alış (Lot)</th>
+            <th>Satılan (Lot)</th>
+            <th>Satılmamış (Lot)</th>
+            <th>Günlük Kar</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.GunlukOzet)
+        {
+            <tr>
+                <td>@item.Tarih.ToShortDateString()</td>
+                <td><a asp-page="/HisseDetay" asp-route-hisse="@item.HisseAdi">@item.HisseAdi</a></td>
+                <td>@item.ToplamAlis</td>
+                <td>@item.Satilan</td>
+                <td>@item.Satilmamis</td>
+                <td>@item.GunlukKar.ToString("C")</td>
+            </tr>
+        }
+    </tbody>
+</table>

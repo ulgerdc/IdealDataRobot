@@ -1,0 +1,311 @@
+@page
+@model StockPortfolioReports.Pages.StratejiDogrulamaModel
+@{
+    ViewData["Title"] = "Strateji Dogrulama";
+}
+
+<h3 class="mb-3">Strateji Dogrulama Raporu</h3>
+
+<!-- Filtre Satiri -->
+<form method="get" class="row g-2 mb-4 align-items-end">
+    <div class="col-auto">
+        <label class="form-label mb-0 small">Hisse</label>
+        <select name="HisseFiltre" class="form-select form-select-sm">
+            <option value="">Tumu</option>
+            @foreach (var h in Model.HisseListesi)
+            {
+                <option value="@h" selected="@(Model.HisseFiltre == h)">@h</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <label class="form-label mb-0 small">Baslangic</label>
+        <input type="date" name="BaslangicTarih" value="@Model.BaslangicTarih?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+    </div>
+    <div class="col-auto">
+        <label class="form-label mb-0 small">Bitis</label>
+        <input type="date" name="BitisTarih" value="@Model.BitisTarih?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary btn-sm">Filtrele</button>
+    </div>
+</form>
+
+<!-- Bolum 1: Ozet Kartlari -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-primary h-100">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-primary">Grid Performans</h6>
+                <div class="d-flex justify-content-between">
+                    <span>Kar:</span>
+                    <strong class="@(Model.GridKar >= 0 ? "text-success" : "text-danger")">@Model.GridKar.ToString("N2") TL</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Islem:</span>
+                    <strong>@Model.GridIslem</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Kazanc:</span>
+                    <strong>%@Model.GridKazancOrani</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Ort Tutma:</span>
+                    <strong>@Model.GridOrtTutma gun</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-warning h-100">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-warning">Core Performans</h6>
+                <div class="d-flex justify-content-between">
+                    <span>Kar:</span>
+                    <strong class="@(Model.CoreKar >= 0 ? "text-success" : "text-danger")">@Model.CoreKar.ToString("N2") TL</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Islem:</span>
+                    <strong>@Model.CoreIslem</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Kazanc:</span>
+                    <strong>%@Model.CoreKazancOrani</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Ort Tutma:</span>
+                    <strong>@Model.CoreOrtTutma gun</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-danger h-100">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-danger">Butce Korumasi</h6>
+                <div class="d-flex justify-content-between">
+                    <span>Engellenen:</span>
+                    <strong>@Model.ButceEngel alim</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Son Tetik:</span>
+                    <strong>@(Model.ButceEngelSonTarih?.ToString("dd/MM HH:mm") ?? "-")</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info h-100">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-info">Aktif Pozisyonlar</h6>
+                <div class="d-flex justify-content-between">
+                    <span>Grid:</span>
+                    <strong>@Model.AktifGrid adet / @Model.AktifGridTutar.ToString("N0") TL</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Core:</span>
+                    <strong>@Model.AktifCore adet / @Model.AktifCoreTutar.ToString("N0") TL</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Ort Yas:</span>
+                    <strong>@Model.OrtYas gun</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bolum 2: Strateji Kural Sayaclari -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+    <span class="badge bg-primary fs-6">Grid Satis: @Model.GridSatisSayisi</span>
+    <span class="badge bg-warning text-dark fs-6">Zaman Indirimi: @Model.ZamanIndirimiSayisi</span>
+    <span class="badge bg-info text-dark fs-6">Core Cikis: @Model.CoreCikisSayisi</span>
+    <span class="badge bg-danger fs-6">Butce Limiti: @Model.ButceLimitiSayisi</span>
+    <span class="badge bg-secondary fs-6">ATR Gecis: @Model.AtrGecisSayisi</span>
+    <span class="badge bg-dark fs-6">Trend Korumasi: @Model.TrendKorumaSayisi</span>
+</div>
+
+<!-- Bolum 3: Grafikler -->
+<div class="row mb-4">
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-title">Grid vs Core Kar Karsilastirmasi</h6>
+                <canvas id="gridCoreBarChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-title">Strateji Olay Dagilimi</h6>
+                <canvas id="olayDoughnutChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bolum 4: Zaman Bazli Satis Analizi -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="card-title">Zaman Bazli Satis Analizi</h6>
+        <div class="table-responsive">
+            <table class="table table-sm table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>Yas Grubu</th>
+                        <th class="text-end">Grid Adet</th>
+                        <th class="text-end">Grid Kar</th>
+                        <th class="text-end">Core Adet</th>
+                        <th class="text-end">Core Kar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.YasDagilimi)
+                    {
+                        <tr>
+                            <td>@row.YasGrubu</td>
+                            <td class="text-end">@row.GridAdet</td>
+                            <td class="text-end @(row.GridKar >= 0 ? "text-success" : "text-danger")">@row.GridKar.ToString("N2")</td>
+                            <td class="text-end">@row.CoreAdet</td>
+                            <td class="text-end @(row.CoreKar >= 0 ? "text-success" : "text-danger")">@row.CoreKar.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Bolum 5: Hisse Bazli Detay Tablosu -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="card-title">Hisse Bazli Detay</h6>
+        <div class="table-responsive">
+            <table class="table table-sm table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>Hisse</th>
+                        <th class="text-end">Grid Islem</th>
+                        <th class="text-end">Core Islem</th>
+                        <th class="text-end">Grid Kar</th>
+                        <th class="text-end">Core Kar</th>
+                        <th class="text-end">Ort.Maliyet</th>
+                        <th class="text-end">Ort Tutma</th>
+                        <th class="text-end">Butce %</th>
+                        <th>Config</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.HisseDetaylari)
+                    {
+                        <tr>
+                            <td><a asp-page="/HisseDetay" asp-route-hisse="@row.HisseAdi">@row.HisseAdi</a></td>
+                            <td class="text-end">@row.GridIslem</td>
+                            <td class="text-end">@row.CoreIslem</td>
+                            <td class="text-end @(row.GridKar >= 0 ? "text-success" : "text-danger")">@row.GridKar.ToString("N2")</td>
+                            <td class="text-end @(row.CoreKar >= 0 ? "text-success" : "text-danger")">@row.CoreKar.ToString("N2")</td>
+                            <td class="text-end">@(row.OrtalamaMaliyet > 0 ? row.OrtalamaMaliyet.ToString("N2") : "-")</td>
+                            <td class="text-end">@row.OrtTutma gun</td>
+                            <td class="text-end">%@row.ButceYuzde</td>
+                            <td class="small text-muted">
+                                @if (row.CoreOran != null)
+                                {
+                                    <span>C:@row.CoreOran% M:@row.CoreMarj TS:@row.TrailingStopYuzde%</span>
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Bolum 6: Son Strateji Olaylari -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="card-title">Son Strateji Olaylari</h6>
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Tarih</th>
+                        <th>Hisse</th>
+                        <th>Olay</th>
+                        <th>Detay</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var olay in Model.SonOlaylar)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@olay.Tarih?.ToString("dd/MM HH:mm")</td>
+                            <td>@olay.HisseAdi</td>
+                            <td><span class="badge @StratejiDogrulamaModel.OlayBadgeClass(olay.OlayTipi)">@StratejiDogrulamaModel.OlayLabel(olay.OlayTipi)</span></td>
+                            <td class="small text-truncate" style="max-width:400px;" title="@olay.Detay">@olay.Detay</td>
+                        </tr>
+                    }
+                    @if (!Model.SonOlaylar.Any())
+                    {
+                        <tr><td colspan="4" class="text-center text-muted">Bu tarih araliginda strateji olayi bulunamadi.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Grid vs Core Bar Chart
+    const barData = @Html.Raw(Model.GridCoreKarJson);
+    if (barData.labels && barData.labels.length > 0) {
+        new Chart(document.getElementById('gridCoreBarChart'), {
+            type: 'bar',
+            data: {
+                labels: barData.labels,
+                datasets: [
+                    { label: 'Grid Kar', data: barData.gridData, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
+                    { label: 'Core Kar', data: barData.coreData, backgroundColor: 'rgba(255, 159, 64, 0.7)' }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'top' } },
+                scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString('tr-TR') + ' TL' } } }
+            }
+        });
+    }
+
+    // Olay Dagilimi Doughnut
+    const doughnutData = @Html.Raw(Model.OlayDagilimJson);
+    if (doughnutData.data && doughnutData.data.some(v => v > 0)) {
+        new Chart(document.getElementById('olayDoughnutChart'), {
+            type: 'doughnut',
+            data: {
+                labels: doughnutData.labels,
+                datasets: [{
+                    data: doughnutData.data,
+                    backgroundColor: [
+                        'rgba(13, 110, 253, 0.8)',
+                        'rgba(255, 193, 7, 0.8)',
+                        'rgba(13, 202, 240, 0.8)',
+                        'rgba(220, 53, 69, 0.8)',
+                        'rgba(108, 117, 125, 0.8)',
+                        'rgba(33, 37, 41, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'right' } }
+            }
+        });
+    }
+</script>
+}

@@ -1,0 +1,12 @@
+
+CREATE proc [dbo].[sel_portfoy]
+	@hisseAdi varchar(20)=null
+as
+
+
+select a.HisseAdi,a.kar,a.aktiflot,a.piyasasatis,
+a.toplamHarcanan /a.totallot as maliyet,
+(a.aktiflot * a.piyasaalis) portfoy,
+(a.piyasasatis - ((a.aktifHarcanan - a.kar)/a.aktiflo
+
+(1 rows affected)

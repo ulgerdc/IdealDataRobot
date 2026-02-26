@@ -1,0 +1,636 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © BIST30 Pragmatik Hibrit Grid Screener
+// 30 BIST hissesini tek seferde tarar, pragmatik hibrit grid stratejisini simule eder
+// ROI siralamasini tablo olarak gosterir
+//
+// Kullanim: TradingView'da herhangi bir BIST grafikine ekle (grafik onemli degil)
+// Tum veriler request.security() ile cekilir
+
+//@version=5
+indicator("BIST30 Pragmatik Grid Screener", overlay=false, max_bars_back=5000)
+
+// ==================== PARAMETRELER ====================
+grp_date   = "Backtest Tarih Araligi"
+grp_grid   = "Grid Ayarlari"
+grp_core   = "Core (Uzun Vade) Ayarlari"
+grp_time   = "Zaman Bazli Marj Indirimi"
+grp_budget = "Butce Yonetimi"
+grp_index  = "Endeks Filtresi (XU030)"
+grp_display = "Gosterim"
+
+// Tarih araligi
+startDate   = input.time(timestamp("2024-02-22 00:00 +0300"), "Baslangic Tarihi", group=grp_date)
+endDate     = input.time(timestamp("2026-02-22 23:59 +0300"), "Bitis Tarihi",     group=grp_date)
+
+// Grid parametreleri
+gridMarginBinde = input.float(7.0,    "Grid Marj (binde)",       minval=1.0, maxval=50.0, step=0.5, group=grp_grid)
+buyAmount       = input.float(5000,   "Alim Tutari (TL)",        minval=100, maxval=50000, step=500, group=grp_grid)
+totalBudget     = input.float(100000, "Toplam Butce (TL)",       minval=10000, maxval=1000000, step=10000, group=grp_grid)
+
+// Core parametreleri
+coreRatio       = input.float(15.0,   "Core Orani (%)",          minval=0, maxval=80, step=5, group=grp_core)
+coreTargetBinde = input.float(100.0,  "Core Hedef (binde=%10)",  minval=10, maxval=500, step=10, group=grp_core)
+trailingStopPct = input.float(5.0,    "Trailing Stop (%)",       minval=1.0, maxval=20.0, step=0.5, group=grp_core)
+
+// Zaman bazli
+timeDecayStart  = input.int(30,       "Marj Indirimi Baslangic (gun)", minval=10, maxval=90, step=5, group=grp_time)
+
+// Butce
+budgetLimitPct  = input.float(80.0,   "Butce Hard Limiti (%)",   minval=30, maxval=100, step=5, group=grp_budget)
+
+// Endeks filtresi
+indexEmaFast    = input.int(8,        "XU030 EMA Hizli",         minval=3, maxval=21, step=1, group=grp_index)
+indexEmaSlow    = input.int(21,       "XU030 EMA Yavas",         minval=13, maxval=55, step=1, group=grp_index)
+bearishBuyMult  = input.float(0.5,    "Dusus Alim Carpani",      minval=0.0, maxval=1.0, step=0.1, group=grp_index)
+
+// Gosterim
+sortByROI       = input.bool(true,    "ROI'ye Gore Sirala",      group=grp_display)
+showTopN        = input.int(30,       "Gosterilecek Hisse Sayisi", minval=5, maxval=30, step=5, group=grp_display)
+tablePos        = input.string("Top Right", "Tablo Pozisyonu", options=["Top Right", "Top Left", "Bottom Right", "Bottom Left"], group=grp_display)
+
+// ==================== SABITLER ====================
+int NUM_STOCKS = 30
+int MAX_POS    = 80   // hisse basi max pozisyon
+
+// ==================== 30 HISSE VERISI ====================
+c01 = request.security("BIST:AKBNK", "D", close)
+c02 = request.security("BIST:ARCLK", "D", close)
+c03 = request.security("BIST:ASELS", "D", close)
+c04 = request.security("BIST:BIMAS", "D", close)
+c05 = request.security("BIST:EKGYO", "D", close)
+c06 = request.security("BIST:EREGL", "D", close)
+c07 = request.security("BIST:FROTO", "D", close)
+c08 = request.security("BIST:GARAN", "D", close)
+c09 = request.security("BIST:GUBRF", "D", close)
+c10 = request.security("BIST:HEKTS", "D", close)
+c11 = request.security("BIST:ISCTR", "D", close)
+c12 = request.security("BIST:KCHOL", "D", close)
+c13 = request.security("BIST:TRMET", "D", close)
+c14 = request.security("BIST:TRALT", "D", close)
+c15 = request.security("BIST:KRDMD", "D", close)
+c16 = request.security("BIST:MGROS", "D", close)
+c17 = request.security("BIST:ODAS",  "D", close)
+c18 = request.security("BIST:PETKM", "D", close)
+c19 = request.security("BIST:PGSUS", "D", close)
+c20 = request.security("BIST:SAHOL", "D", close)
+c21 = request.security("BIST:SASA",  "D", close)
+c22 = request.security("BIST:SISE",  "D", close)
+c23 = request.security("BIST:TAVHL", "D", close)
+c24 = request.security("BIST:TCELL", "D", close)
+c25 = request.security("BIST:THYAO", "D", close)
+c26 = request.security("BIST:TKFEN", "D", close)
+c27 = request.security("BIST:TOASO", "D", close)
+c28 = request.security("BIST:TUPRS", "D", close)
+c29 = request.security("BIST:VESTL", "D", close)
+c30 = request.security("BIST:YKBNK", "D", close)
+
+// XU030 endeks verisi
+xu030 = request.security("BIST:XU030", "D", close)
+
+// ==================== ENDEKS EMA ====================
+xu030_ema8  = ta.ema(xu030, indexEmaFast)
+xu030_ema21 = ta.ema(xu030, indexEmaSlow)
+bool indexBearish = xu030_ema8 < xu030_ema21
+
+// ==================== FIYAT DIZISI ====================
+// Hisse fiyatlarini diziye aktar (dongu ile islem icin)
+var string[] stockNames = array.new_string(NUM_STOCKS)
+if barstate.isfirst
+    array.set(stockNames, 0,  "AKBNK")
+    array.set(stockNames, 1,  "ARCLK")
+    array.set(stockNames, 2,  "ASELS")
+    array.set(stockNames, 3,  "BIMAS")
+    array.set(stockNames, 4,  "EKGYO")
+    array.set(stockNames, 5,  "EREGL")
+    array.set(stockNames, 6,  "FROTO")
+    array.set(stockNames, 7,  "GARAN")
+    array.set(stockNames, 8,  "GUBRF")
+    array.set(stockNames, 9,  "HEKTS")
+    array.set(stockNames, 10, "ISCTR")
+    array.set(stockNames, 11, "KCHOL")
+    array.set(stockNames, 12, "TRMET")
+    array.set(stockNames, 13, "TRALT")
+    array.set(stockNames, 14, "KRDMD")
+    array.set(stockNames, 15, "MGROS")
+    array.set(stockNames, 16, "ODAS")
+    array.set(stockNames, 17, "PETKM")
+    array.set(stockNames, 18, "PGSUS")
+    array.set(stockNames, 19, "SAHOL")
+    array.set(stockNames, 20, "SASA")
+    array.set(stockNames, 21, "SISE")
+    array.set(stockNames, 22, "TAVHL")
+    array.set(stockNames, 23, "TCELL")
+    array.set(stockNames, 24, "THYAO")
+    array.set(stockNames, 25, "TKFEN")
+    array.set(stockNames, 26, "TOASO")
+    array.set(stockNames, 27, "TUPRS")
+    array.set(stockNames, 28, "VESTL")
+    array.set(stockNames, 29, "YKBNK")
+
+// Gecerli fiyatlari diziye al
+stockPrice(int idx) =>
+    float p = switch idx
+        0  => c01
+        1  => c02
+        2  => c03
+        3  => c04
+        4  => c05
+        5  => c06
+        6  => c07
+        7  => c08
+        8  => c09
+        9  => c10
+        10 => c11
+        11 => c12
+        12 => c13
+        13 => c14
+        14 => c15
+        15 => c16
+        16 => c17
+        17 => c18
+        18 => c19
+        19 => c20
+        20 => c21
+        21 => c22
+        22 => c23
+        23 => c24
+        24 => c25
+        25 => c26
+        26 => c27
+        27 => c28
+        28 => c29
+        29 => c30
+        => na
+    p
+
+// ==================== POZISYON DIZILERI (OFFSET BAZLI) ====================
+// 30 hisse x MAX_POS pozisyon = buyuk diziler
+int TOTAL_SLOTS = NUM_STOCKS * MAX_POS
+
+// Grid pozisyonlari
+var float[] allGridEntry = array.new_float(TOTAL_SLOTS, 0.0)
+var int[]   allGridBar   = array.new_int(TOTAL_SLOTS, 0)
+var float[] allGridLot   = array.new_float(TOTAL_SLOTS, 0.0)
+var int[]   gridCount    = array.new_int(NUM_STOCKS, 0)
+
+// Core pozisyonlari
+var float[] allCoreEntry = array.new_float(TOTAL_SLOTS, 0.0)
+var float[] allCorePeak  = array.new_float(TOTAL_SLOTS, 0.0)
+var float[] allCoreLot   = array.new_float(TOTAL_SLOTS, 0.0)
+var int[]   coreCount    = array.new_int(NUM_STOCKS, 0)
+
+// Hisse bazinda istatistikler
+var float[] gridProfit      = array.new_float(NUM_STOCKS, 0.0)
+var float[] coreProfit      = array.new_float(NUM_STOCKS, 0.0)
+var int[]   gridTradeCount  = array.new_int(NUM_STOCKS, 0)
+var int[]   coreTradeCount  = array.new_int(NUM_STOCKS, 0)
+var int[]   gridSellCount   = array.new_int(NUM_STOCKS, 0)
+var int[]   coreSellCount   = array.new_int(NUM_STOCKS, 0)
+var int[]   timeDecaySells  = array.new_int(NUM_STOCKS, 0)
+var int[]   budgetBlocks    = array.new_int(NUM_STOCKS, 0)
+
+// ==================== AYLIK BASELINE VERILERI ====================
+int MAX_MONTHS = 25
+int MONTHLY_SLOTS = NUM_STOCKS * MAX_MONTHS  // 30x25=750
+
+var float[] monthlyROI = array.new_float(MONTHLY_SLOTS, 0.0)
+var float[] monthlyBtc = array.new_float(MONTHLY_SLOTS, 0.0)
+var int[]   monthLabels = array.new_int(MAX_MONTHS, 0)  // YYYYMM formati
+var int monthIdx = 0
+var int prevMonth = 0
+var int prevYear  = 0
+
+// ==================== YARDIMCI FONKSIYONLAR ====================
+
+// Hisse icin toplam yatirim
+calcInvested(int sIdx) =>
+    int gOff = sIdx * MAX_POS
+    int gCnt = array.get(gridCount, sIdx)
+    int cOff = sIdx * MAX_POS
+    int cCnt = array.get(coreCount, sIdx)
+    float total = 0.0
+    if gCnt > 0
+        for j = 0 to gCnt - 1
+            total += array.get(allGridEntry, gOff + j) * array.get(allGridLot, gOff + j)
+    if cCnt > 0
+        for j = 0 to cCnt - 1
+            total += array.get(allCoreEntry, cOff + j) * array.get(allCoreLot, cOff + j)
+    total
+
+// Hisse ROI hesapla (realized + unrealized)
+calcStockROI(int sIdx) =>
+    float price = stockPrice(sIdx)
+    int gOff = sIdx * MAX_POS
+    int cOff = sIdx * MAX_POS
+    int gCnt = array.get(gridCount, sIdx)
+    int cCnt = array.get(coreCount, sIdx)
+    float realized = array.get(gridProfit, sIdx) + array.get(coreProfit, sIdx)
+    float unrealized = 0.0
+    if gCnt > 0 and not na(price)
+        for j = 0 to gCnt - 1
+            float ep = array.get(allGridEntry, gOff + j)
+            float lt = array.get(allGridLot,   gOff + j)
+            unrealized += lt * (price - ep)
+    if cCnt > 0 and not na(price)
+        for j = 0 to cCnt - 1
+            float ep = array.get(allCoreEntry, cOff + j)
+            float lt = array.get(allCoreLot,   cOff + j)
+            unrealized += lt * (price - ep)
+    (realized + unrealized) / totalBudget * 100.0
+
+// Hisse butce kullanim yuzdesi
+calcStockBtcPct(int sIdx) =>
+    calcInvested(sIdx) / totalBudget * 100.0
+
+// Zaman bazli marj carpani
+timeDecayMult(int barsHeld) =>
+    float mult = 1.0
+    if barsHeld >= 120
+        mult := 0.0
+    else if barsHeld >= 90
+        mult := 0.25
+    else if barsHeld >= 60
+        mult := 0.50
+    else if barsHeld >= timeDecayStart
+        mult := 0.75
+    mult
+
+// Grid pozisyon sil (son eleman ile degistir — O(1))
+gridRemove(int sIdx, int j) =>
+    int off = sIdx * MAX_POS
+    int cnt = array.get(gridCount, sIdx)
+    int last = cnt - 1
+    if j != last
+        array.set(allGridEntry, off + j, array.get(allGridEntry, off + last))
+        array.set(allGridBar,   off + j, array.get(allGridBar,   off + last))
+        array.set(allGridLot,   off + j, array.get(allGridLot,   off + last))
+    array.set(allGridEntry, off + last, 0.0)
+    array.set(allGridBar,   off + last, 0)
+    array.set(allGridLot,   off + last, 0.0)
+    array.set(gridCount, sIdx, cnt - 1)
+
+// Core pozisyon sil
+coreRemove(int sIdx, int j) =>
+    int off = sIdx * MAX_POS
+    int cnt = array.get(coreCount, sIdx)
+    int last = cnt - 1
+    if j != last
+        array.set(allCoreEntry, off + j, array.get(allCoreEntry, off + last))
+        array.set(allCorePeak,  off + j, array.get(allCorePeak,  off + last))
+        array.set(allCoreLot,   off + j, array.get(allCoreLot,   off + last))
+    array.set(allCoreEntry, off + last, 0.0)
+    array.set(allCorePeak,  off + last, 0.0)
+    array.set(allCoreLot,   off + last, 0.0)
+    array.set(coreCount, sIdx, cnt - 1)
+
+// ==================== TARIH FILTRESI ====================
+bool inDateRange = time >= startDate and time <= endDate
+
+// ==================== ANA SIMULASYON DONGUSU ====================
+if inDateRange
+    for sIdx = 0 to NUM_STOCKS - 1
+        float price = stockPrice(sIdx)
+        if na(price) or price <= 0
+            continue
+
+        int gOff = sIdx * MAX_POS
+        int cOff = sIdx * MAX_POS
+        int gCnt = array.get(gridCount, sIdx)
+        int cCnt = array.get(coreCount, sIdx)
+
+        float margin = (gridMarginBinde / 1000.0) * price
+        float invested = calcInvested(sIdx)
+        float budgetPct = (invested / totalBudget) * 100.0
+
+        // ---- KATMAN 1: Grid Satis + Core Ayirimi ----
+        if gCnt > 0
+            int i = gCnt - 1
+            while i >= 0
+                float ep = array.get(allGridEntry, gOff + i)
+                float lt = array.get(allGridLot,   gOff + i)
+                float sellMargin = (gridMarginBinde / 1000.0) * ep
+                if price >= ep + sellMargin
+                    if coreRatio > 0
+                        float gridLots = lt * (100.0 - coreRatio) / 100.0
+                        float coreLots = lt * coreRatio / 100.0
+                        float gp = gridLots * (price - ep)
+                        array.set(gridProfit, sIdx, array.get(gridProfit, sIdx) + gp)
+                        array.set(gridSellCount, sIdx, array.get(gridSellCount, sIdx) + 1)
+                        // Core'a aktar
+                        if coreLots > 0 and cCnt < MAX_POS
+                            array.set(allCoreEntry, cOff + cCnt, ep)
+                            array.set(allCorePeak,  cOff + cCnt, price)
+                            array.set(allCoreLot,   cOff + cCnt, coreLots)
+                            cCnt += 1
+                            array.set(coreCount, sIdx, cCnt)
+                    else
+                        float gp = lt * (price - ep)
+                        array.set(gridProfit, sIdx, array.get(gridProfit, sIdx) + gp)
+                        array.set(gridSellCount, sIdx, array.get(gridSellCount, sIdx) + 1)
+                    array.set(gridTradeCount, sIdx, array.get(gridTradeCount, sIdx) + 1)
+                    gridRemove(sIdx, i)
+                    gCnt := array.get(gridCount, sIdx)
+                i -= 1
+
+        // ---- KATMAN 2: Zaman Bazli Marj Indirimi ----
+        gCnt := array.get(gridCount, sIdx)
+        if gCnt > 0
+            int i = gCnt - 1
+            while i >= 0
+                float ep = array.get(allGridEntry, gOff + i)
+                float lt = array.get(allGridLot,   gOff + i)
+                int entryBar = array.get(allGridBar, gOff + i)
+                int barsHeld = bar_index - entryBar
+                if barsHeld >= timeDecayStart
+                    float decayM = timeDecayMult(barsHeld)
+                    float baseMargin = (gridMarginBinde / 1000.0) * ep
+                    float adjMargin = baseMargin * decayM
+                    if price >= ep + adjMargin
+                        float gp = lt * (price - ep)
+                        array.set(gridProfit, sIdx, array.get(gridProfit, sIdx) + gp)
+                        array.set(gridTradeCount, sIdx, array.get(gridTradeCount, sIdx) + 1)
+                        array.set(timeDecaySells, sIdx, array.get(timeDecaySells, sIdx) + 1)
+                        gridRemove(sIdx, i)
+                        gCnt := array.get(gridCount, sIdx)
+                i -= 1
+
+        // ---- KATMAN 3: Core Pozisyon Cikisi ----
+        cCnt := array.get(coreCount, sIdx)
+        if cCnt > 0
+            int i = cCnt - 1
+            while i >= 0
+                float ep = array.get(allCoreEntry, cOff + i)
+                float pk = array.get(allCorePeak,  cOff + i)
+                float lt = array.get(allCoreLot,   cOff + i)
+                bool sell = false
+                // Hedef
+                float target = ep * (1.0 + coreTargetBinde / 1000.0)
+                if price >= target
+                    sell := true
+                // Trailing stop
+                float trailStop = pk * (1.0 - trailingStopPct / 100.0)
+                if price <= trailStop and pk > ep * 1.01
+                    sell := true
+                if sell
+                    float cp = lt * (price - ep)
+                    array.set(coreProfit, sIdx, array.get(coreProfit, sIdx) + cp)
+                    array.set(coreTradeCount, sIdx, array.get(coreTradeCount, sIdx) + 1)
+                    array.set(coreSellCount, sIdx, array.get(coreSellCount, sIdx) + 1)
+                    coreRemove(sIdx, i)
+                    cCnt := array.get(coreCount, sIdx)
+                i -= 1
+
+        // ---- KATMAN 4: Core Tepe Guncelle ----
+        cCnt := array.get(coreCount, sIdx)
+        if cCnt > 0
+            for i = 0 to cCnt - 1
+                if price > array.get(allCorePeak, cOff + i)
+                    array.set(allCorePeak, cOff + i, price)
+
+        // ---- ALIS KONTROLLERI ----
+        gCnt := array.get(gridCount, sIdx)
+
+        // Butce hard limiti
+        invested := calcInvested(sIdx)
+        budgetPct := (invested / totalBudget) * 100.0
+        bool budgetOk = budgetPct < budgetLimitPct
+        if not budgetOk
+            array.set(budgetBlocks, sIdx, array.get(budgetBlocks, sIdx) + 1)
+
+        // Fiyat mesafe kontrolu
+        bool priceOk = true
+        if gCnt > 0
+            for j = 0 to gCnt - 1
+                float existP = array.get(allGridEntry, gOff + j)
+                if math.abs(price - existP) < margin
+                    priceOk := false
+                    break
+
+        // EMA filtre
+        float buyMult = indexBearish ? bearishBuyMult : 1.0
+
+        if budgetOk and priceOk and buyMult > 0.0 and gCnt < MAX_POS
+            float adjBuy = buyAmount * buyMult
+            float lots = math.floor(adjBuy / price)
+            if lots > 0
+                array.set(allGridEntry, gOff + gCnt, price)
+                array.set(allGridBar,   gOff + gCnt, bar_index)
+                array.set(allGridLot,   gOff + gCnt, lots)
+                array.set(gridCount, sIdx, gCnt + 1)
+
+    // ---- AYLIK SNAPSHOT ----
+    int curMonth = month(time)
+    int curYear  = year(time)
+    bool isNewMonth = (curMonth != prevMonth or curYear != prevYear) and prevMonth != 0
+    if isNewMonth and monthIdx < MAX_MONTHS
+        array.set(monthLabels, monthIdx, prevYear * 100 + prevMonth)
+        for s = 0 to NUM_STOCKS - 1
+            array.set(monthlyROI, s * MAX_MONTHS + monthIdx, calcStockROI(s))
+            array.set(monthlyBtc, s * MAX_MONTHS + monthIdx, calcStockBtcPct(s))
+        monthIdx += 1
+    prevMonth := curMonth
+    prevYear  := curYear
+
+// ==================== SON BAR: TABLO ====================
+if barstate.islastconfirmedhistory or barstate.isrealtime
+
+    // Tablo pozisyonu
+    var posn = switch tablePos
+        "Top Right"    => position.top_right
+        "Top Left"     => position.top_left
+        "Bottom Right" => position.bottom_right
+        "Bottom Left"  => position.bottom_left
+        => position.top_right
+
+    int COLS = 12
+    int ROWS = math.min(showTopN, NUM_STOCKS) + 3  // tarih + baslik + ozet
+
+    var table tbl = table.new(posn, COLS, ROWS + 1, bgcolor=color.new(color.black, 80), border_width=1)
+
+    // Sonuclari hesapla
+    float[] roiArr     = array.new_float(NUM_STOCKS, 0.0)
+    float[] realArr    = array.new_float(NUM_STOCKS, 0.0)
+    float[] unrlArr    = array.new_float(NUM_STOCKS, 0.0)
+    int[]   openPosArr = array.new_int(NUM_STOCKS, 0)
+    float[] openValArr = array.new_float(NUM_STOCKS, 0.0)
+    int[]   idxArr     = array.new_int(NUM_STOCKS, 0)
+
+    float grandRealized   = 0.0
+    float grandUnrealized = 0.0
+
+    for s = 0 to NUM_STOCKS - 1
+        float price = stockPrice(s)
+        int gOff = s * MAX_POS
+        int cOff = s * MAX_POS
+        int gCnt = array.get(gridCount, s)
+        int cCnt = array.get(coreCount, s)
+
+        float realized = array.get(gridProfit, s) + array.get(coreProfit, s)
+        float unrealized = 0.0
+        float openVal = 0.0
+        if gCnt > 0 and not na(price)
+            for j = 0 to gCnt - 1
+                float ep = array.get(allGridEntry, gOff + j)
+                float lt = array.get(allGridLot,   gOff + j)
+                unrealized += lt * (price - ep)
+                openVal += lt * ep
+        if cCnt > 0 and not na(price)
+            for j = 0 to cCnt - 1
+                float ep = array.get(allCoreEntry, cOff + j)
+                float lt = array.get(allCoreLot,   cOff + j)
+                unrealized += lt * (price - ep)
+                openVal += lt * ep
+
+        float totalPnL = realized + unrealized
+        float roi = totalPnL / totalBudget * 100.0
+
+        array.set(roiArr,     s, roi)
+        array.set(realArr,    s, realized)
+        array.set(unrlArr,    s, unrealized)
+        array.set(openPosArr, s, gCnt + cCnt)
+        array.set(openValArr, s, openVal)
+        array.set(idxArr,     s, s)
+
+        grandRealized   += realized
+        grandUnrealized += unrealized
+
+    // Momentum & Recovery hesaplama
+    float[] ayDeltaArr  = array.new_float(NUM_STOCKS, 0.0)
+    float[] mom3Arr     = array.new_float(NUM_STOCKS, 0.0)
+    int[]   durumArr    = array.new_int(NUM_STOCKS, 0)  // 0=pozitif(-), 1=negatif(X), 2=recovery(^REC)
+    int     recoveryCount = 0
+
+    for s = 0 to NUM_STOCKS - 1
+        float sROI = array.get(roiArr, s)
+        float ad = 0.0
+        float m3 = 0.0
+        if monthIdx >= 2
+            float r1 = array.get(monthlyROI, s * MAX_MONTHS + monthIdx - 1)
+            float r0 = array.get(monthlyROI, s * MAX_MONTHS + monthIdx - 2)
+            ad := r1 - r0
+        if monthIdx >= 3
+            float r2 = array.get(monthlyROI, s * MAX_MONTHS + monthIdx - 1)
+            float r1m = array.get(monthlyROI, s * MAX_MONTHS + monthIdx - 2)
+            float r0 = array.get(monthlyROI, s * MAX_MONTHS + monthIdx - 3)
+            m3 := ((r2 - r1m) + (r1m - r0)) / 2.0
+        array.set(ayDeltaArr, s, ad)
+        array.set(mom3Arr, s, m3)
+        if sROI < 0
+            if m3 > 0 and monthIdx >= 3
+                float b1 = array.get(monthlyBtc, s * MAX_MONTHS + monthIdx - 1)
+                float b0 = array.get(monthlyBtc, s * MAX_MONTHS + monthIdx - 2)
+                if b1 < b0
+                    array.set(durumArr, s, 2)  // recovery
+                    recoveryCount += 1
+                else
+                    array.set(durumArr, s, 1)  // negatif
+            else
+                array.set(durumArr, s, 1)  // negatif
+
+    // Siralama (bubble sort — 30 eleman icin yeterli)
+    if sortByROI
+        for i = 0 to NUM_STOCKS - 2
+            for j = 0 to NUM_STOCKS - i - 2
+                int a = array.get(idxArr, j)
+                int b = array.get(idxArr, j + 1)
+                if array.get(roiArr, a) < array.get(roiArr, b)
+                    array.set(idxArr, j, b)
+                    array.set(idxArr, j + 1, a)
+
+    // Baslik satiri 0: tarih bilgisi
+    int hRow = 0
+    string dateInfo = str.format("{0,date,dd.MM.yy}", startDate) + " - " + str.format("{0,date,dd.MM.yy}", endDate)
+    table.cell(tbl, 0, hRow, "",           text_color=color.silver, text_size=size.small, bgcolor=color.new(color.teal, 80))
+    table.cell(tbl, 1, hRow, "BIST30 Screener", text_color=color.white, text_size=size.small, text_halign=text.align_left, bgcolor=color.new(color.teal, 80))
+    table.cell(tbl, 2, hRow, dateInfo,     text_color=color.silver, text_size=size.small, text_halign=text.align_right, bgcolor=color.new(color.teal, 80))
+    table.cell(tbl, 3, hRow, "Binde:" + str.tostring(gridMarginBinde, "#.#"), text_color=color.silver, text_size=size.small, text_halign=text.align_right, bgcolor=color.new(color.teal, 80))
+    table.cell(tbl, 4, hRow, "Core:" + str.tostring(coreRatio, "#") + "%", text_color=color.aqua, text_size=size.small, text_halign=text.align_right, bgcolor=color.new(color.teal, 80))
+    table.cell(tbl, 5, hRow, "",           text_color=color.silver, text_size=size.small, bgcolor=color.new(color.teal, 80))
+    table.cell(tbl, 6, hRow, "",           text_color=color.silver, text_size=size.small, bgcolor=color.new(color.teal, 80))
+    table.cell(tbl, 7, hRow, "",           text_color=color.silver, text_size=size.small, bgcolor=color.new(color.teal, 80))
+    table.cell(tbl, 8, hRow, "Limit:" + str.tostring(budgetLimitPct, "#") + "%", text_color=color.orange, text_size=size.small, text_halign=text.align_right, bgcolor=color.new(color.teal, 80))
+    table.cell(tbl, 9, hRow, "",                text_color=color.silver, text_size=size.small, bgcolor=color.new(color.teal, 80))
+    table.cell(tbl, 10, hRow, "Ay:" + str.tostring(monthIdx), text_color=color.aqua, text_size=size.small, text_halign=text.align_right, bgcolor=color.new(color.teal, 80))
+    table.cell(tbl, 11, hRow, "",               text_color=color.silver, text_size=size.small, bgcolor=color.new(color.teal, 80))
+
+    // Baslik satiri 1: kolon isimleri
+    int colRow = 1
+    color hdrColor = color.silver
+    table.cell(tbl, 0, colRow, "#",         text_color=hdrColor, text_size=size.small, text_halign=text.align_center)
+    table.cell(tbl, 1, colRow, "Hisse",     text_color=hdrColor, text_size=size.small, text_halign=text.align_left)
+    table.cell(tbl, 2, colRow, "ROI%",      text_color=hdrColor, text_size=size.small, text_halign=text.align_right)
+    table.cell(tbl, 3, colRow, "Gercekl.",  text_color=hdrColor, text_size=size.small, text_halign=text.align_right)
+    table.cell(tbl, 4, colRow, "Acik K/Z",  text_color=hdrColor, text_size=size.small, text_halign=text.align_right)
+    table.cell(tbl, 5, colRow, "Grid",      text_color=hdrColor, text_size=size.small, text_halign=text.align_right)
+    table.cell(tbl, 6, colRow, "Core",      text_color=hdrColor, text_size=size.small, text_halign=text.align_right)
+    table.cell(tbl, 7, colRow, "AcikPoz",   text_color=hdrColor, text_size=size.small, text_halign=text.align_right)
+    table.cell(tbl, 8, colRow, "Btc%",      text_color=hdrColor, text_size=size.small, text_halign=text.align_right)
+    table.cell(tbl, 9, colRow, "AyDelta",   text_color=hdrColor, text_size=size.small, text_halign=text.align_right)
+    table.cell(tbl, 10, colRow, "Mom3",     text_color=hdrColor, text_size=size.small, text_halign=text.align_right)
+    table.cell(tbl, 11, colRow, "Durum",    text_color=hdrColor, text_size=size.small, text_halign=text.align_right)
+
+    // Satirlar
+    int displayed = math.min(showTopN, NUM_STOCKS)
+    for rank = 0 to displayed - 1
+        int row = rank + 2
+        int s = array.get(idxArr, rank)
+        string name = array.get(stockNames, s)
+        float roi   = array.get(roiArr, s)
+        float real  = array.get(realArr, s)
+        float unrl  = array.get(unrlArr, s)
+        int gSell   = array.get(gridSellCount, s)
+        int cSell   = array.get(coreSellCount, s)
+        int openP   = array.get(openPosArr, s)
+        float openV = array.get(openValArr, s)
+        float btcPct = openV / totalBudget * 100.0
+
+        color roiColor  = roi >= 0 ? color.lime : color.red
+        color realColor = real >= 0 ? color.lime : color.red
+        color unrlColor = unrl >= 0 ? color.lime : color.red
+        color btcColor  = btcPct >= budgetLimitPct ? color.red : (btcPct >= 60 ? color.orange : color.green)
+
+        float ad   = array.get(ayDeltaArr, s)
+        float m3   = array.get(mom3Arr, s)
+        int   drm  = array.get(durumArr, s)
+        color adColor  = ad >= 0 ? color.lime : color.red
+        color m3Color  = m3 >= 0 ? color.lime : color.red
+        string durumText = drm == 2 ? "^REC" : (drm == 1 ? "X" : "-")
+        color  durumColor = drm == 2 ? color.lime : (drm == 1 ? color.red : color.gray)
+
+        // Arka plan: recovery koyu yesil, diger satirlar alternatif
+        color rowBg = drm == 2 ? color.new(color.green, 85) : (rank % 2 == 0 ? color.new(color.black, 85) : color.new(color.gray, 90))
+
+        table.cell(tbl, 0, row, str.tostring(rank + 1),                text_color=color.white, text_size=size.small, text_halign=text.align_center, bgcolor=rowBg)
+        table.cell(tbl, 1, row, name,                                   text_color=color.white, text_size=size.small, text_halign=text.align_left,   bgcolor=rowBg)
+        table.cell(tbl, 2, row, str.tostring(roi, "#.##") + "%",       text_color=roiColor,    text_size=size.small, text_halign=text.align_right,  bgcolor=rowBg)
+        table.cell(tbl, 3, row, str.tostring(real, "#"),                text_color=realColor,   text_size=size.small, text_halign=text.align_right,  bgcolor=rowBg)
+        table.cell(tbl, 4, row, str.tostring(unrl, "#"),                text_color=unrlColor,   text_size=size.small, text_halign=text.align_right,  bgcolor=rowBg)
+        table.cell(tbl, 5, row, str.tostring(gSell),                    text_color=color.lime,  text_size=size.small, text_halign=text.align_right,  bgcolor=rowBg)
+        table.cell(tbl, 6, row, str.tostring(cSell),                    text_color=color.aqua,  text_size=size.small, text_halign=text.align_right,  bgcolor=rowBg)
+        table.cell(tbl, 7, row, str.tostring(openP),                    text_color=color.yellow, text_size=size.small, text_halign=text.align_right, bgcolor=rowBg)
+        table.cell(tbl, 8, row, str.tostring(btcPct, "#.#") + "%",     text_color=btcColor,    text_size=size.small, text_halign=text.align_right,  bgcolor=rowBg)
+        table.cell(tbl, 9, row, monthIdx >= 2 ? str.tostring(ad, "#.##") : "-", text_color=adColor, text_size=size.small, text_halign=text.align_right, bgcolor=rowBg)
+        table.cell(tbl, 10, row, monthIdx >= 3 ? str.tostring(m3, "#.##") : "-", text_color=m3Color, text_size=size.small, text_halign=text.align_right, bgcolor=rowBg)
+        table.cell(tbl, 11, row, durumText,                                       text_color=durumColor, text_size=size.small, text_halign=text.align_right, bgcolor=rowBg)
+
+    // Ozet satiri
+    int sumRow = displayed + 2
+    float grandTotal = grandRealized + grandUnrealized
+    float avgROI = grandTotal / totalBudget / NUM_STOCKS * 100.0
+    color sumColor = grandTotal >= 0 ? color.lime : color.red
+
+    table.cell(tbl, 0, sumRow, "",                                               text_color=color.white,  text_size=size.small, bgcolor=color.new(color.navy, 70))
+    table.cell(tbl, 1, sumRow, "TOPLAM",                                         text_color=color.white,  text_size=size.small, text_halign=text.align_left,  bgcolor=color.new(color.navy, 70))
+    table.cell(tbl, 2, sumRow, "ort:" + str.tostring(avgROI, "#.##") + "%",      text_color=sumColor,     text_size=size.small, text_halign=text.align_right, bgcolor=color.new(color.navy, 70))
+    table.cell(tbl, 3, sumRow, str.tostring(grandRealized, "#"),                  text_color=grandRealized >= 0 ? color.lime : color.red, text_size=size.small, text_halign=text.align_right, bgcolor=color.new(color.navy, 70))
+    table.cell(tbl, 4, sumRow, str.tostring(grandUnrealized, "#"),                text_color=grandUnrealized >= 0 ? color.lime : color.red, text_size=size.small, text_halign=text.align_right, bgcolor=color.new(color.navy, 70))
+    table.cell(tbl, 5, sumRow, "",                                               text_color=color.white,  text_size=size.small, bgcolor=color.new(color.navy, 70))
+    table.cell(tbl, 6, sumRow, "",                                               text_color=color.white,  text_size=size.small, bgcolor=color.new(color.navy, 70))
+    table.cell(tbl, 7, sumRow, "",                                               text_color=color.white,  text_size=size.small, bgcolor=color.new(color.navy, 70))
+    table.cell(tbl, 8, sumRow, "XU030:" + (indexBearish ? "DUSUS" : "YUKARIS"),  text_color=indexBearish ? color.red : color.lime, text_size=size.small, text_halign=text.align_right, bgcolor=color.new(color.navy, 70))
+    table.cell(tbl, 9, sumRow, "",                                               text_color=color.white,  text_size=size.small, bgcolor=color.new(color.navy, 70))
+    table.cell(tbl, 10, sumRow, "",                                              text_color=color.white,  text_size=size.small, bgcolor=color.new(color.navy, 70))
+    table.cell(tbl, 11, sumRow, "REC:" + str.tostring(recoveryCount),            text_color=recoveryCount > 0 ? color.lime : color.gray, text_size=size.small, text_halign=text.align_right, bgcolor=color.new(color.navy, 70))
+
+// Bos plot (indicator gereksinimi)
+plot(0, display=display.none)

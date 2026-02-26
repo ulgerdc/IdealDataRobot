@@ -1,0 +1,277 @@
+//@version=5
+indicator("Arbitraj Gelismis Backtest", overlay=false, max_labels_count=500)
+
+// ============================================================
+// INPUTS
+// ============================================================
+grpGenel = "Genel"
+arbitrajTipi = input.string("Spot-VIOP", "Arbitraj Tipi", options=["Spot-VIOP", "Takvim Spread"], group=grpGenel)
+sermaye = input.float(100000, "Sermaye (TL)", group=grpGenel)
+
+grpSembol = "Semboller"
+viopYakinSembol = input.symbol("BIST:ASELSH2026", "VIOP Yakin Vade", group=grpSembol)
+viopUzakSembol  = input.symbol("", "VIOP Uzak Vade (Takvim icin)", group=grpSembol)
+
+grpVade = "Vade Parametreleri"
+vadeSonGunInput     = input.time(timestamp("2026-03-27"), "Yakin Vade Son Gun", group=grpVade)
+uzakVadeSonGunInput = input.time(timestamp("2026-04-30"), "Uzak Vade Son Gun (Takvim)", group=grpVade)
+yillikFaiz = input.float(37.0, "Yillik Faiz %", minval=0, step=1, group=grpVade)
+
+grpTemettu = "Temettu"
+temettuTutar    = input.float(0, "Temettu Tutar (TL/hisse)", minval=0, step=0.1, group=grpTemettu,
+     tooltip="Beklenen temettu tutari. 0 = temettu yok.")
+temettuTarihiInput = input.time(timestamp("2026-01-01"), "Temettu Ex-Date", group=grpTemettu,
+     tooltip="Temettu hakedis tarihi. Bu tarihten ONCE temettu duzeltmesi uygulanir.")
+
+grpStrateji = "Strateji Parametreleri"
+girisMarji = input.float(2.0, "Giris Marji (Net Prim %)", step=0.1, group=grpStrateji)
+cikisMarji = input.float(0.5, "Cikis Marji (Net Prim %)", step=0.1, group=grpStrateji)
+
+grpLot = "Lot / Pozisyon"
+bistLot    = input.int(100, "BIST Lot (Spot-VIOP)", minval=1, group=grpLot)
+viopLot    = input.int(1, "VIOP Lot", minval=1, group=grpLot)
+viopCarpan = input.int(100, "VIOP Kontrat Carpani", minval=1, group=grpLot,
+     tooltip="1 VIOP lot kac hisseye karsilik gelir (genelde 100)")
+
+// ============================================================
+// FIYAT VERISI
+// ============================================================
+// Spot-VIOP: Ana chart = BIST hissesi, VIOP request.security ile
+// Takvim:    Her iki bacak request.security ile
+bistFiyat      = close
+viopYakinFiyat = request.security(viopYakinSembol, timeframe.period, close)
+viopUzakFiyat  = viopUzakSembol != "" ? request.security(viopUzakSembol, timeframe.period, close) : na
+
+// ============================================================
+// KALAN GUN HESABI
+// ============================================================
+kalanGunYakin = math.max(0, math.round((vadeSonGunInput - time) / 86400000.0))
+kalanGunUzak  = math.max(0, math.round((uzakVadeSonGunInput - time) / 86400000.0))
+
+// ============================================================
+// SPREAD + ADIL DEGER + NET PRIM
+// ============================================================
+float spreadYuzde = na
+float adilSpread  = na
+float netPrim     = na
+bool  veriVar     = false
+
+// Temettu duzeltmesi: ex-date oncesiyse temettu yuzdesini adil spread'den cikart
+temettuDuzeltme(spotFiyat) =>
+    if temettuTutar > 0 and time < temettuTarihiInput and spotFiyat > 0
+        temettuTutar / spotFiyat * 100
+    else
+        0.0
+
+if arbitrajTipi == "Spot-VIOP"
+    if not na(viopYakinFiyat) and bistFiyat > 0
+        spreadYuzde := (viopYakinFiyat - bistFiyat) / bistFiyat * 100
+        adilSpread  := yillikFaiz * (kalanGunYakin / 365.0) - temettuDuzeltme(bistFiyat)
+        netPrim     := spreadYuzde - adilSpread
+        veriVar     := true
+else
+    if not na(viopYakinFiyat) and not na(viopUzakFiyat) and viopYakinFiyat > 0
+        spreadYuzde := (viopUzakFiyat - viopYakinFiyat) / viopYakinFiyat * 100
+        vadeFarki    = kalanGunUzak - kalanGunYakin
+        adilSpread  := yillikFaiz * (vadeFarki / 365.0) - temettuDuzeltme(viopYakinFiyat)
+        netPrim     := math.abs(spreadYuzde) - adilSpread
+        veriVar     := true
+
+// ============================================================
+// POZISYON YONETIMI
+// ============================================================
+var bool  pozAcik           = false
+var float girisSpreadYuzde  = 0.0
+var float girisNetPrim      = 0.0
+var float girisBist         = 0.0
+var float girisViop1        = 0.0
+var float girisViop2        = 0.0
+var bool  girisContango     = true
+var float toplamKar         = 0.0
+var float acikKar           = 0.0
+var int   islemSayisi       = 0
+var int   kazancliIslem     = 0
+var int   maxAcikGun        = 0
+var int   pozGirisBar       = 0
+
+bool girisYapildi = false
+bool cikisYapildi = false
+float sonKar      = 0.0
+
+if veriVar
+    // --- GIRIS ---
+    if not pozAcik and netPrim >= girisMarji
+        pozAcik          := true
+        girisSpreadYuzde := spreadYuzde
+        girisNetPrim     := netPrim
+        girisBist        := bistFiyat
+        girisViop1       := viopYakinFiyat
+        girisViop2       := nz(viopUzakFiyat, 0)
+        girisContango    := spreadYuzde > 0
+        pozGirisBar      := bar_index
+        girisYapildi     := true
+
+    // --- CIKIS ---
+    if pozAcik and netPrim <= cikisMarji
+        float kar = 0.0
+        if arbitrajTipi == "Spot-VIOP"
+            // BIST ALIS → SATIS + VIOP SATIS → ALIS
+            bistKar = (bistFiyat - girisBist) * bistLot
+            viopKar = (girisViop1 - viopYakinFiyat) * viopLot * viopCarpan
+            kar := bistKar + viopKar
+        else
+            if girisContango
+                // Yakin ALIS → SATIS + Uzak SATIS → ALIS
+                yakinKar = (viopYakinFiyat - girisViop1) * viopLot * viopCarpan
+                uzakKar  = (girisViop2 - viopUzakFiyat) * viopLot * viopCarpan
+                kar := yakinKar + uzakKar
+            else
+                // Yakin SATIS → ALIS + Uzak ALIS → SATIS
+                yakinKar = (girisViop1 - viopYakinFiyat) * viopLot * viopCarpan
+                uzakKar  = (viopUzakFiyat - girisViop2) * viopLot * viopCarpan
+                kar := yakinKar + uzakKar
+
+        sonKar       := kar
+        toplamKar    += kar
+        islemSayisi  += 1
+        if kar > 0
+            kazancliIslem += 1
+        acikGun = bar_index - pozGirisBar
+        if acikGun > maxAcikGun
+            maxAcikGun := acikGun
+        pozAcik      := false
+        cikisYapildi := true
+
+    // --- ACIK POZISYON P&L ---
+    if pozAcik
+        if arbitrajTipi == "Spot-VIOP"
+            acikKar := (bistFiyat - girisBist) * bistLot + (girisViop1 - viopYakinFiyat) * viopLot * viopCarpan
+        else
+            if girisContango
+                acikKar := (viopYakinFiyat - girisViop1) * viopLot * viopCarpan + (girisViop2 - viopUzakFiyat) * viopLot * viopCarpan
+            else
+                acikKar := (girisViop1 - viopYakinFiyat) * viopLot * viopCarpan + (viopUzakFiyat - girisViop2) * viopLot * viopCarpan
+    else
+        acikKar := 0.0
+
+// ============================================================
+// PLOTLAR
+// ============================================================
+// Spread ve Adil Spread — arka planda, ince, seffaf
+pSpread = plot(spreadYuzde, "Spread %", color=color.new(color.blue, 60), linewidth=1)
+pAdil   = plot(adilSpread, "Adil Spread %", color=color.new(color.orange, 60), linewidth=1)
+// Spread ile Adil arasini doldur — prim bolgesini goster
+fillRenk = spreadYuzde > adilSpread ? color.new(color.green, 85) : color.new(color.red, 85)
+fill(pSpread, pAdil, color=fillRenk, title="Prim Bolgesi")
+
+// Net Prim — ANA GOSTERGE, kalin
+netPrimRenk = netPrim >= girisMarji ? color.green : netPrim <= cikisMarji ? color.red : color.white
+plot(netPrim, "Net Prim %", color=netPrimRenk, linewidth=3)
+
+// Giris/Cikis marj cizgileri
+hline(girisMarji, "Giris Marji", color=color.green, linestyle=hline.style_dashed)
+hline(cikisMarji, "Cikis Marji", color=color.red, linestyle=hline.style_dashed)
+hline(0, "Sifir", color=color.gray, linestyle=hline.style_dotted)
+
+// Pozisyon acikken arka plan
+bgcolor(pozAcik ? color.new(color.blue, 92) : na, title="Pozisyon Acik")
+
+// Giris/Cikis marj bolgesi — hafif renk dolgu
+girisLine = plot(girisMarji, "Giris Ust", color=color.new(color.green, 100), display=display.none)
+cikisLine = plot(cikisMarji, "Cikis Alt", color=color.new(color.red, 100), display=display.none)
+
+// Giris/Cikis isaretleri
+plotshape(girisYapildi, "Giris", shape.triangleup, location.bottom, color.lime, size=size.normal)
+plotshape(cikisYapildi, "Cikis", shape.triangledown, location.top, color.red, size=size.normal)
+
+// Giris label
+if girisYapildi
+    label.new(bar_index, netPrim, "GIRIS " + str.tostring(netPrim, "#.##") + "%",
+         style=label.style_label_up, color=color.green, textcolor=color.white, size=size.normal)
+
+// Cikis label
+if cikisYapildi
+    karRenk = sonKar >= 0 ? color.green : color.red
+    label.new(bar_index, netPrim, "CIKIS " + str.tostring(sonKar, "#") + " TL",
+         style=label.style_label_down, color=karRenk, textcolor=color.white, size=size.normal)
+
+// ============================================================
+// P&L PLOT (data window'da)
+// ============================================================
+plot(toplamKar + acikKar, "Toplam P&L (TL)", color=color.new(color.purple, 0), linewidth=1,
+     display=display.data_window)
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+var table dash = table.new(position.top_right, 2, 14, bgcolor=color.new(color.black, 80), border_width=1, border_color=color.gray)
+
+if barstate.islast
+    headerColor = color.new(color.white, 0)
+    sz = size.small
+
+    // Baslik
+    table.cell(dash, 0, 0, arbitrajTipi, text_color=color.yellow, text_size=sz, text_halign=text.align_left)
+    table.cell(dash, 1, 0, syminfo.ticker, text_color=color.yellow, text_size=sz)
+
+    // Fiyatlar
+    if arbitrajTipi == "Spot-VIOP"
+        table.cell(dash, 0, 1, "BIST / VIOP", text_color=headerColor, text_size=sz, text_halign=text.align_left)
+        table.cell(dash, 1, 1, str.tostring(bistFiyat, "#.##") + " / " + str.tostring(viopYakinFiyat, "#.##"), text_color=color.white, text_size=sz)
+    else
+        table.cell(dash, 0, 1, "Yakin / Uzak", text_color=headerColor, text_size=sz, text_halign=text.align_left)
+        table.cell(dash, 1, 1, str.tostring(viopYakinFiyat, "#.##") + " / " + str.tostring(viopUzakFiyat, "#.##"), text_color=color.white, text_size=sz)
+
+    // Spread
+    table.cell(dash, 0, 2, "Spread %", text_color=headerColor, text_size=sz, text_halign=text.align_left)
+    table.cell(dash, 1, 2, str.tostring(spreadYuzde, "#.##") + "%", text_color=color.blue, text_size=sz)
+
+    // Adil Spread
+    table.cell(dash, 0, 3, "Adil Spread %", text_color=headerColor, text_size=sz, text_halign=text.align_left)
+    table.cell(dash, 1, 3, str.tostring(adilSpread, "#.##") + "%", text_color=color.orange, text_size=sz)
+
+    // Net Prim
+    primColor = netPrim >= girisMarji ? color.green : netPrim <= cikisMarji ? color.red : color.white
+    table.cell(dash, 0, 4, "Net Prim %", text_color=headerColor, text_size=sz, text_halign=text.align_left)
+    table.cell(dash, 1, 4, str.tostring(netPrim, "#.##") + "%", text_color=primColor, text_size=sz)
+
+    // Kalan Gun
+    table.cell(dash, 0, 5, "Kalan Gun", text_color=headerColor, text_size=sz, text_halign=text.align_left)
+    gunText = arbitrajTipi == "Spot-VIOP" ? str.tostring(kalanGunYakin) : "Y:" + str.tostring(kalanGunYakin) + " U:" + str.tostring(kalanGunUzak)
+    table.cell(dash, 1, 5, gunText, text_color=color.white, text_size=sz)
+
+    // Ayirici
+    table.cell(dash, 0, 6, "---", text_color=color.gray, text_size=sz)
+    table.cell(dash, 1, 6, "---", text_color=color.gray, text_size=sz)
+
+    // Pozisyon
+    table.cell(dash, 0, 7, "Pozisyon", text_color=headerColor, text_size=sz, text_halign=text.align_left)
+    pozText = pozAcik ? "ACIK (giris:" + str.tostring(girisSpreadYuzde, "#.##") + "%)" : "KAPALI"
+    table.cell(dash, 1, 7, pozText, text_color=pozAcik ? color.yellow : color.gray, text_size=sz)
+
+    // Acik P&L
+    table.cell(dash, 0, 8, "Acik P&L", text_color=headerColor, text_size=sz, text_halign=text.align_left)
+    table.cell(dash, 1, 8, str.tostring(acikKar, "#.##") + " TL", text_color=acikKar >= 0 ? color.green : color.red, text_size=sz)
+
+    // Toplam Kar
+    table.cell(dash, 0, 9, "Toplam Kar", text_color=headerColor, text_size=sz, text_halign=text.align_left)
+    table.cell(dash, 1, 9, str.tostring(toplamKar, "#.##") + " TL", text_color=toplamKar >= 0 ? color.green : color.red, text_size=sz)
+
+    // Toplam P&L (kapali + acik)
+    toplamPL = toplamKar + acikKar
+    table.cell(dash, 0, 10, "Toplam P&L", text_color=headerColor, text_size=sz, text_halign=text.align_left)
+    table.cell(dash, 1, 10, str.tostring(toplamPL, "#.##") + " TL", text_color=toplamPL >= 0 ? color.green : color.red, text_size=sz)
+
+    // ROI
+    roi = sermaye > 0 ? toplamPL / sermaye * 100 : 0
+    table.cell(dash, 0, 11, "ROI %", text_color=headerColor, text_size=sz, text_halign=text.align_left)
+    table.cell(dash, 1, 11, str.tostring(roi, "#.##") + "%", text_color=roi >= 0 ? color.green : color.red, text_size=sz)
+
+    // Islem Sayisi
+    table.cell(dash, 0, 12, "Islem", text_color=headerColor, text_size=sz, text_halign=text.align_left)
+    table.cell(dash, 1, 12, str.tostring(islemSayisi) + " (" + str.tostring(kazancliIslem) + " K)", text_color=color.white, text_size=sz)
+
+    // Win Rate
+    winRate = islemSayisi > 0 ? kazancliIslem * 100.0 / islemSayisi : 0.0
+    table.cell(dash, 0, 13, "Win Rate", text_color=headerColor, text_size=sz, text_halign=text.align_left)
+    table.cell(dash, 1, 13, str.tostring(winRate, "#.#") + "%", text_color=color.white, text_size=sz)

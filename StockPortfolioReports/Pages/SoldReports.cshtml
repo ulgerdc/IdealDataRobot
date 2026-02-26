@@ -1,0 +1,32 @@
+﻿@page
+@model SoldReportsModel
+
+<h2>Satılmış Hisse Raporu</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Hisse Adı</th>
+            <th>Lot</th>
+            <th>Alış Fiyatı</th>
+            <th>Satış Fiyatı</th>
+            <th>Kar</th>
+            <th>Alış Tarihi</th>
+            <th>Satış Tarihi</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Satilanlar)
+        {
+            <tr>
+                <td><a asp-page="/HisseDetay" asp-route-hisse="@item.HisseAdi">@item.HisseAdi</a></td>
+                <td>@item.Lot</td>
+                <td>@item.AlisFiyati</td>
+                <td>@item.SatisFiyati</td>
+                <td>@item.Kar</td>
+                <td>@item.AlisTarihi.ToShortDateString()</td>
+                <td>@item.SatisTarihi?.ToShortDateString()</td>
+            </tr>
+        }
+    </tbody>
+</table>
