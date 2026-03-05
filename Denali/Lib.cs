@@ -33,7 +33,6 @@
     {
         ArbitrajStratejiGelismis.Baslat(Sistem);
     }
-
     public void YutanMumBaslat(dynamic Sistem)
     {
         YutanMumStrateji.Baslat(Sistem);

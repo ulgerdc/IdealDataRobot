@@ -45,7 +45,8 @@
       "Bash(export MSBUILDER=\"/c/Program Files \\(x86\\)/Microsoft Visual Studio/2022/BuildTools/MSBuild/Current/Bin/MSBuild.exe\" && \"$MSBUILDER\" \"C:/iko/robot/Denali/Denali.csproj\" -p:Configuration=Debug -v:minimal 2>&1)",
       "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Professional/MSBuild/Current/Bin/MSBuild.exe\" \"C:/iko/robot/Denali/Denali.csproj\" /p:Configuration=Debug /v:minimal 2>&1 || \"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\" \"C:/iko/robot/Denali/Denali.csproj\" /p:Configuration=Debug /v:minimal 2>&1 || \"/c/Program Files \\(x86\\)/Microsoft Visual Studio/2022/BuildTools/MSBuild/Current/Bin/MSBuild.exe\" \"C:/iko/robot/Denali/Denali.csproj\" /p:Configuration=Debug /v:minimal 2>&1)",
       "Bash(\"C:/Program Files \\(x86\\)/Microsoft Visual Studio/2022/BuildTools/MSBuild/Current/Bin/MSBuild.exe\":*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(cd \"C:\\\\iko\\\\robot\\\\StockPortfolioReports\\\\publish\" && start \"\" dotnet StockPortfolioReports.dll --urls \"http://localhost:5000\" 2>&1)"
     ],
     "deny": [],
     "ask": []

@@ -738,6 +738,60 @@ StockPortfolioReports'a 2 yeni rapor sayfasi eklendi.
 
 **Build:** Basarili (0 error)
 
+### Faz 20: Manuel Core Emir Sistemi - TAMAMLANDI (2026-03-02)
+
+Web arayuzunden manuel Core alis emri girme sistemi. Emir `ManuelEmir` tablosuna yazilir, KademeStratejiGelismis calistiginda piyasa fiyati limit fiyata esit veya altindaysa IdealPro'ya emir gonderir ve HisseHareket'e Core (PozisyonTipi=1) olarak kaydeder.
+
+**Tablo: ManuelEmir**
+- `Id` bigint IDENTITY PK
+- `HisseAdi` varchar(20), `Lot` int, `AlisFiyati` float (limit fiyat)
+- `Durum` int: 0=Bekliyor, 1=Gerceklesti, 2=Iptal
+- `OlusturmaTarihi`, `GerceklesmeTarihi`, `GercekFiyat`, `Aciklama`
+
+**SP'ler:** `sel_manuelEmir` (bekleyen emirler, hisse filtreli), `upd_manuelEmir` (durum guncelle)
+
+**Akis:**
+1. Web'den emir girilir → ManuelEmir tablosuna Durum=0 kayit
+2. KademeStratejiGelismis.Baslat() her dongude `ManuelEmirKontrol()` cagirir (satis ile alis arasinda)
+3. `alisFiyati <= emir.AlisFiyati` ise → IdealManager.Al() + HisseHareket Core kayit + ManuelEmir Durum=1
+4. Web'den bekleyen emirler gorulebilir ve iptal edilebilir (Durum=2)
+
+**SQL Migration:** `manuel_emir_migration.sql` — **Veritabaninda calistirildi:** Basarili
+
+**Degisen dosyalar:**
+| Dosya | Degisiklik |
+|-------|-----------|
+| `manuel_emir_migration.sql` | YENI — ManuelEmir tablosu + sel/upd SP'leri |
+| `Denali/ManuelEmir.cs` | YENI — Entity class |
+| `Denali/Denali.csproj` | +ManuelEmir.cs Compile Include |
+| `Denali/DatabaseManager.cs` | +ManuelEmirGetir(), +ManuelEmirGuncelle() |
+| `Denali/KademeStratejiGelismis.cs` | +ManuelEmirKontrol() metodu, Baslat() icinde cagriliyor |
+| `StockPortfolioReports/Class.cs` | +ManuelEmir entity + DbSet |
+| `StockPortfolioReports/Pages/CoreEkle.cshtml.cs` | ManuelEmir INSERT + bekleyen emirler listesi + iptal handler |
+| `StockPortfolioReports/Pages/CoreEkle.cshtml` | Limit fiyat aciklamasi, bekleyen emirler tablosu, iptal butonu |
+
+**Build:** Basarili (ideal.dll 0 error, StockPortfolioReports 0 error)
+
+### Faz 21: Grid Sat-Al Dongusu Onleme - TAMAMLANDI (2026-03-03)
+
+Satis yapildiktan sonra ayni/yakin fiyattan tekrar alim yapilmasi sorunu duzeltildi.
+
+**Sorun:** `sel_hisseAlimKontrol` SP sadece `AktifMi=1` pozisyonlari kontrol ediyordu. Satis yapilinca pozisyon `AktifMi=0` olur ve alim kontrolunden kaciyordu. Ornek: TAVHL 305.50'den satildi → 13 dk sonra 305.50'den tekrar alindi.
+
+**Cozum:** `sel_hisseAlimKontrol` SP'sine bugun satilan pozisyonlarin `SatisFiyati` yakinlik kontrolu eklendi:
+- `AktifMi=0 AND SatisTarihi >= CAST(GETDATE() AS DATE)` → bugun kapanan pozisyonlar
+- `SatisFiyati` ±marj araliginda ise alim engellenir
+- Ertesi gun blok kalkar — fiyat hala oradaysa yeni grid giris olarak kabul edilir
+
+**SQL Migration:** `grid_satal_onleme_migration.sql` — **Veritabaninda calistirildi:** Basarili
+
+**Degisen dosyalar:**
+| Dosya | Degisiklik |
+|-------|-----------|
+| `grid_satal_onleme_migration.sql` | YENI — sel_hisseAlimKontrol SP guncelleme |
+
+C# kodu degismiyor — `DatabaseManager.HisseAlimKontrol()` ayni parametrelerle ayni SP'yi cagiriyor.
+
 ### Bekleyen Isler / Sonraki Adimlar
 
 1. ~~PINE SCRIPT: Pragmatik hibrit yaklasim~~ — TAMAMLANDI

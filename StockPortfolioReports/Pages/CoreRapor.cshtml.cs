@@ -82,8 +82,8 @@ namespace StockPortfolioReports.Pages
                     HisseAdi = hisse,
                     AktifAdet = aktifler.Count,
                     AktifLot = aktifler.Sum(h => h.Lot),
-                    OrtMaliyet = aktifler.Count > 0
-                        ? Math.Round(aktifler.Average(h => h.AlisFiyati), 2) : 0,
+                    OrtMaliyet = aktifler.Sum(h => h.Lot) > 0
+                        ? Math.Round(aktifMaliyet / aktifler.Sum(h => h.Lot), 2) : 0,
                     GuncelFiyat = guncelFiyat,
                     Maliyet = aktifMaliyet,
                     GuncelDeger = aktifGuncelDeger,

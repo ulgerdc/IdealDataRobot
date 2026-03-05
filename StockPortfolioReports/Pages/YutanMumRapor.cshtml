@@ -1,0 +1,319 @@
+@page
+@model StockPortfolioReports.Pages.YutanMumRaporModel
+@{
+    ViewData["Title"] = "YutanMum Raporu";
+}
+
+<h4>YutanMum Strateji Raporu</h4>
+
+<!-- Filtre -->
+<form method="get" class="row g-3 mb-4">
+    <div class="col-auto">
+        <label class="form-label">Baslangic</label>
+        <input type="date" class="form-control" name="BaslangicTarih"
+               value="@Model.BaslangicTarih?.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-auto">
+        <label class="form-label">Bitis</label>
+        <input type="date" class="form-control" name="BitisTarih"
+               value="@Model.BitisTarih?.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-auto">
+        <label class="form-label">Hisse</label>
+        <select class="form-select" name="HisseFiltre">
+            <option value="">Tumu</option>
+            @foreach (var h in Model.HisseListesi)
+            {
+                <option value="@h" selected="@(Model.HisseFiltre == h)">@h</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto d-flex align-items-end">
+        <button type="submit" class="btn btn-primary">Filtrele</button>
+    </div>
+</form>
+
+<!-- Ozet Kartlari -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white @(Model.ToplamKar >= 0 ? "bg-success" : "bg-danger")">
+            <div class="card-body">
+                <h6 class="card-title">Net K/Z</h6>
+                <h4>@Model.ToplamKar.ToString("N2") TL</h4>
+                @if (Model.ToplamAlimTutari > 0)
+                {
+                    var roi = Math.Round(Model.ToplamKar / Model.ToplamAlimTutari * 100, 2);
+                    <small>ROI: %@roi.ToString("N2")</small>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-dark text-white">
+            <div class="card-body">
+                <h6 class="card-title">Batch</h6>
+                <h4>@Model.ToplamBatch toplam / @Model.KapananBatch kapanan</h4>
+                <small>Toplam alim: @Model.ToplamAlimTutari.ToString("N0") TL</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h6 class="card-title">Islem</h6>
+                <h4>@Model.ToplamIslem kapanan</h4>
+                <small>@Model.KazancliIslem kazancli / @Model.KayipliIslem kayipli</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-secondary text-white">
+            <div class="card-body">
+                <h6 class="card-title">Basari Orani</h6>
+                @if (Model.ToplamIslem > 0)
+                {
+                    <h4>%@(((double)Model.KazancliIslem / Model.ToplamIslem * 100).ToString("N1"))</h4>
+                    <small>@Model.KazancliIslem / @Model.ToplamIslem</small>
+                }
+                else
+                {
+                    <h4>-</h4>
+                    <small>Kapanan islem yok</small>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Batch Tablosu -->
+<div class="card mb-4">
+    <div class="card-header">
+        <strong>Batch Gecmisi</strong>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-striped table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Tarih</th>
+                    <th>Hisseler</th>
+                    <th class="text-end">Adet</th>
+                    <th class="text-end">Alim Tutari</th>
+                    <th class="text-center">K/Z</th>
+                    <th class="text-end">Kar</th>
+                    <th class="text-center">Durum</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var b in Model.Batchler)
+                {
+                    <tr>
+                        <td>@b.Id</td>
+                        <td>@b.Tarih.ToString("dd.MM.yyyy HH:mm")</td>
+                        <td><small>@b.Hisseler</small></td>
+                        <td class="text-end">@b.HisseSayisi</td>
+                        <td class="text-end">@b.AlimTutari.ToString("N0")</td>
+                        <td class="text-center">
+                            <span class="text-success">@b.KazancliAdet</span> /
+                            <span class="text-danger">@b.KayipliAdet</span>
+                        </td>
+                        <td class="text-end @(b.Kar >= 0 ? "text-success" : "text-danger")">
+                            <strong>@b.Kar.ToString("N2")</strong>
+                        </td>
+                        <td class="text-center">
+                            @if (b.AktifMi)
+                            {
+                                <span class="badge bg-warning text-dark">Aktif</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-info">@b.KapanisNedeni</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            @if (Model.Batchler.Any())
+            {
+                <tfoot class="table-dark">
+                    <tr>
+                        <td colspan="4"><strong>TOPLAM</strong></td>
+                        <td class="text-end">@Model.Batchler.Sum(b => b.AlimTutari).ToString("N0")</td>
+                        <td class="text-center">
+                            <span class="text-success">@Model.Batchler.Sum(b => b.KazancliAdet)</span> /
+                            <span class="text-danger">@Model.Batchler.Sum(b => b.KayipliAdet)</span>
+                        </td>
+                        <td class="text-end @(Model.Batchler.Sum(b => b.Kar) >= 0 ? "text-success" : "text-danger")">
+                            <strong>@Model.Batchler.Sum(b => b.Kar).ToString("N2")</strong>
+                        </td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            }
+        </table>
+        @if (!Model.Batchler.Any())
+        {
+            <div class="text-center text-muted py-4">Bu tarih araliginda batch bulunamadi.</div>
+        }
+    </div>
+</div>
+
+<!-- Hisse Bazli Ozet -->
+<div class="card mb-4">
+    <div class="card-header">
+        <strong>Hisse Bazli Ozet</strong>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-striped table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Hisse</th>
+                    <th class="text-end">Islem</th>
+                    <th class="text-end">Lot</th>
+                    <th class="text-end">Alim Tutari</th>
+                    <th class="text-center">K/Z</th>
+                    <th class="text-end">Kar</th>
+                    <th class="text-end">Ort Momentum</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var h in Model.HisseOzetleri)
+                {
+                    <tr>
+                        <td><strong>@h.HisseAdi</strong></td>
+                        <td class="text-end">@h.IslemSayisi</td>
+                        <td class="text-end">@h.ToplamLot</td>
+                        <td class="text-end">@h.ToplamAlim.ToString("N0")</td>
+                        <td class="text-center">
+                            <span class="text-success">@h.KazancliAdet</span> /
+                            <span class="text-danger">@h.KayipliAdet</span>
+                        </td>
+                        <td class="text-end @(h.ToplamKar >= 0 ? "text-success" : "text-danger")">
+                            <strong>@h.ToplamKar.ToString("N2")</strong>
+                        </td>
+                        <td class="text-end">%@h.OrtMomentum.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+            @if (Model.HisseOzetleri.Any())
+            {
+                <tfoot class="table-dark">
+                    <tr>
+                        <td><strong>TOPLAM</strong></td>
+                        <td class="text-end">@Model.HisseOzetleri.Sum(h => h.IslemSayisi)</td>
+                        <td class="text-end">@Model.HisseOzetleri.Sum(h => h.ToplamLot)</td>
+                        <td class="text-end">@Model.HisseOzetleri.Sum(h => h.ToplamAlim).ToString("N0")</td>
+                        <td class="text-center">
+                            <span class="text-success">@Model.HisseOzetleri.Sum(h => h.KazancliAdet)</span> /
+                            <span class="text-danger">@Model.HisseOzetleri.Sum(h => h.KayipliAdet)</span>
+                        </td>
+                        <td class="text-end @(Model.HisseOzetleri.Sum(h => h.ToplamKar) >= 0 ? "text-success" : "text-danger")">
+                            <strong>@Model.HisseOzetleri.Sum(h => h.ToplamKar).ToString("N2")</strong>
+                        </td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            }
+        </table>
+        @if (!Model.HisseOzetleri.Any())
+        {
+            <div class="text-center text-muted py-4">Bu tarih araliginda islem bulunamadi.</div>
+        }
+    </div>
+</div>
+
+<!-- Grafikler -->
+<div class="row mb-4">
+    @if (Model.Batchler.Any(b => !b.AktifMi))
+    {
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><strong>Batch Kar/Zarar</strong></div>
+                <div class="card-body">
+                    <canvas id="batchKarChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    }
+    @if (Model.HisseOzetleri.Any(h => h.ToplamKar != 0))
+    {
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><strong>Hisse Kar/Zarar</strong></div>
+                <div class="card-body">
+                    <canvas id="hisseKarChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        // Batch K/Z grafik
+        var batchData = @Html.Raw(Model.BatchKarJson);
+        if (batchData.labels && batchData.labels.length > 0) {
+            new Chart(document.getElementById('batchKarChart'), {
+                type: 'bar',
+                data: {
+                    labels: batchData.labels,
+                    datasets: [{
+                        label: 'Batch Kar',
+                        data: batchData.karData,
+                        backgroundColor: batchData.karData.map(v => v >= 0
+                            ? 'rgba(40, 167, 69, 0.7)' : 'rgba(220, 53, 69, 0.7)'),
+                        borderColor: batchData.karData.map(v => v >= 0
+                            ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)'),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { ticks: { callback: function(v) { return v.toLocaleString('tr-TR') + ' TL'; } } }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) { return ctx.parsed.y.toLocaleString('tr-TR') + ' TL'; }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Hisse K/Z grafik
+        var hisseData = @Html.Raw(Model.HisseKarJson);
+        if (hisseData.labels && hisseData.labels.length > 0) {
+            new Chart(document.getElementById('hisseKarChart'), {
+                type: 'bar',
+                data: {
+                    labels: hisseData.labels,
+                    datasets: [{
+                        label: 'Toplam Kar',
+                        data: hisseData.karData,
+                        backgroundColor: hisseData.karData.map(v => v >= 0
+                            ? 'rgba(40, 167, 69, 0.7)' : 'rgba(220, 53, 69, 0.7)'),
+                        borderColor: hisseData.karData.map(v => v >= 0
+                            ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)'),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { ticks: { callback: function(v) { return v.toLocaleString('tr-TR') + ' TL'; } } }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) { return ctx.parsed.y.toLocaleString('tr-TR') + ' TL'; }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+}

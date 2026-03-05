@@ -64,6 +64,12 @@ public class KademeStratejiGelismis
             GelismisSatisYap(Sistem, hisseAdi, satisFiyati, marj, hisse);
         }
 
+        // ONCELIK 1.5: MANUEL EMIR KONTROL
+        if (IdealManager.AlisSaatiKontrolEt(Sistem) == false)
+        {
+            ManuelEmirKontrol(Sistem, hisseAdi, alisFiyati);
+        }
+
         // ONCELIK 2: ALIS ISLEMLERI
         if (IdealManager.AlisSaatiKontrolEt(Sistem) == false && hisse.AlisAktif)
         {
@@ -332,5 +338,63 @@ public class KademeStratejiGelismis
         }
 
         return true;
+    }
+
+    public static void ManuelEmirKontrolTumu(dynamic Sistem)
+    {
+        if (Sistem.BaglantiVar == false) return;
+        if (IdealManager.AlisSaatiKontrolEt(Sistem) != false) return;
+
+        var emirler = DatabaseManager.ManuelEmirGetir(null);
+        foreach (var emir in emirler)
+        {
+            double alisFiyati = IdealManager.AlisFiyatiGetir(Sistem, emir.HisseAdi);
+            if (alisFiyati <= 0) continue;
+
+            if (alisFiyati <= emir.AlisFiyati)
+            {
+                IdealManager.Al(Sistem, emir.HisseAdi, emir.Lot, alisFiyati);
+
+                var hareket = new HisseHareket();
+                hareket.HisseAdi = emir.HisseAdi;
+                hareket.Lot = emir.Lot;
+                hareket.AlisFiyati = alisFiyati;
+                hareket.RobotAdi = "ManuelCore";
+                hareket.PozisyonTipi = 1; // Core
+                DatabaseManager.HisseHareketEkleGuncelle(hareket);
+
+                DatabaseManager.ManuelEmirGuncelle(emir.Id, 1, alisFiyati);
+
+                DatabaseManager.RiskDetayEkle(emir.HisseAdi,
+                    string.Format("Manuel Core emir gerceklesti: {0} lot, limit: {1}, gercek: {2}",
+                    emir.Lot, emir.AlisFiyati, alisFiyati));
+            }
+        }
+    }
+
+    public static void ManuelEmirKontrol(dynamic Sistem, string hisseAdi, double alisFiyati)
+    {
+        var emirler = DatabaseManager.ManuelEmirGetir(hisseAdi);
+        foreach (var emir in emirler)
+        {
+            if (alisFiyati <= emir.AlisFiyati)
+            {
+                IdealManager.Al(Sistem, hisseAdi, emir.Lot, alisFiyati);
+
+                var hareket = new HisseHareket();
+                hareket.HisseAdi = hisseAdi;
+                hareket.Lot = emir.Lot;
+                hareket.AlisFiyati = alisFiyati;
+                hareket.RobotAdi = "ManuelCore";
+                hareket.PozisyonTipi = 1; // Core
+                DatabaseManager.HisseHareketEkleGuncelle(hareket);
+
+                DatabaseManager.ManuelEmirGuncelle(emir.Id, 1, alisFiyati);
+
+                DatabaseManager.RiskDetayEkle(hisseAdi,
+                    string.Format("Manuel Core emir gerceklesti: {0} lot, limit: {1}, gercek: {2}",
+                    emir.Lot, emir.AlisFiyati, alisFiyati));
+            }
+        }
     }
 }

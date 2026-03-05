@@ -113,17 +113,23 @@
                     <label asp-for="Hisse.SonIslemTarihi" class="form-label">Son Islem Tarihi</label>
                     <input asp-for="Hisse.SonIslemTarihi" class="form-control" type="date" />
                 </div>
-                <div class="form-check mb-2">
-                    <input asp-for="Hisse.Aktif" class="form-check-input" />
-                    <label asp-for="Hisse.Aktif" class="form-check-label">Aktif</label>
+                <div class="form-check form-switch mb-2">
+                    <input type="checkbox" name="Hisse.Aktif" value="true" class="form-check-input"
+                           id="chkAktif" @(Model.Hisse.Aktif ? "checked" : "") />
+                    <input type="hidden" name="Hisse.Aktif" value="false" />
+                    <label class="form-check-label" for="chkAktif">Aktif</label>
                 </div>
-                <div class="form-check mb-2">
-                    <input asp-for="Hisse.AlisAktif" class="form-check-input" />
-                    <label asp-for="Hisse.AlisAktif" class="form-check-label">Alis Aktif</label>
+                <div class="form-check form-switch mb-2">
+                    <input type="checkbox" name="Hisse.AlisAktif" value="true" class="form-check-input"
+                           id="chkAlisAktif" @((Model.Hisse.AlisAktif ?? false) ? "checked" : "") />
+                    <input type="hidden" name="Hisse.AlisAktif" value="false" />
+                    <label class="form-check-label" for="chkAlisAktif">Alis Aktif</label>
                 </div>
-                <div class="form-check mb-2">
-                    <input asp-for="Hisse.SatisAktif" class="form-check-input" />
-                    <label asp-for="Hisse.SatisAktif" class="form-check-label">Satis Aktif</label>
+                <div class="form-check form-switch mb-2">
+                    <input type="checkbox" name="Hisse.SatisAktif" value="true" class="form-check-input"
+                           id="chkSatisAktif" @((Model.Hisse.SatisAktif ?? false) ? "checked" : "") />
+                    <input type="hidden" name="Hisse.SatisAktif" value="false" />
+                    <label class="form-check-label" for="chkSatisAktif">Satis Aktif</label>
                 </div>
             </fieldset>
 

@@ -132,6 +132,55 @@ namespace StockPortfolioReports
         public DateTime Tarih { get; set; }
     }
 
+    public class YutanMumBatch
+    {
+        public long Id { get; set; }
+        public string RobotAdi { get; set; }
+        public DateTime BatchTarihi { get; set; }
+        public int HisseSayisi { get; set; }
+        public double ToplamAlimTutari { get; set; } // SQL float
+        public double ToplamKar { get; set; } // SQL float
+        public bool AktifMi { get; set; }
+        public DateTime? KapanisTarihi { get; set; }
+        public string? KapanisNedeni { get; set; }
+    }
+
+    public class YutanMumHareket
+    {
+        public long Id { get; set; }
+        public long BatchId { get; set; }
+        public string HisseAdi { get; set; }
+        public int Lot { get; set; }
+        public decimal AlisFiyati { get; set; } // SQL decimal(18,2)
+        public decimal? SatisFiyati { get; set; }
+        public decimal? Kar { get; set; }
+        public DateTime AlisTarihi { get; set; }
+        public DateTime? SatisTarihi { get; set; }
+        public bool AktifMi { get; set; }
+        public decimal? DunkuAcilis { get; set; }
+        public decimal? DunkuKapanis { get; set; }
+        public decimal? BugunAcilis { get; set; }
+        public decimal? BugunKapanis { get; set; }
+        public long? DunkuHacim { get; set; }
+        public long? BugunHacim { get; set; }
+        public double? BugunYuksek { get; set; } // SQL float
+        public double? BugunDusuk { get; set; } // SQL float
+        public double? MomentumYuzde { get; set; } // SQL float
+    }
+
+    public class ManuelEmir
+    {
+        public long Id { get; set; }
+        public string HisseAdi { get; set; }
+        public int Lot { get; set; }
+        public double AlisFiyati { get; set; }
+        public int Durum { get; set; }          // 0=Bekliyor, 1=Gerceklesti, 2=Iptal
+        public DateTime OlusturmaTarihi { get; set; }
+        public DateTime? GerceklesmeTarihi { get; set; }
+        public double? GercekFiyat { get; set; }
+        public string? Aciklama { get; set; }
+    }
+
     // vHisseHareket view entity (HisseHareket + HisseHareketOcak24 + HisseEmir)
     public class VHisseHareket
     {
@@ -162,6 +211,9 @@ namespace StockPortfolioReports
         public DbSet<ArbitrajGelismisConfig> ArbitrajGelismis { get; set; }
         public DbSet<ArbitrajGelismisHareket> ArbitrajGelismisHareket { get; set; }
         public DbSet<ArbitrajSpreadLog> ArbitrajSpreadLog { get; set; }
+        public DbSet<YutanMumBatch> YutanMumBatch { get; set; }
+        public DbSet<YutanMumHareket> YutanMumHareket { get; set; }
+        public DbSet<ManuelEmir> ManuelEmir { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

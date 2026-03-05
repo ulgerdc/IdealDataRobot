@@ -1,0 +1,101 @@
+@page
+@model StockPortfolioReports.Pages.CoreEkleModel
+@{
+    ViewData["Title"] = "Manuel Core Emir";
+}
+
+<h4>Manuel Core Emir</h4>
+
+@if (!string.IsNullOrEmpty(Model.Mesaj))
+{
+    <div class="alert alert-@Model.MesajTipi alert-dismissible fade show" role="alert">
+        @Model.Mesaj
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Yeni Emir</div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="mb-3">
+                        <label class="form-label">Hisse</label>
+                        <select asp-for="HisseAdi" class="form-select">
+                            <option value="">-- Secin --</option>
+                            @foreach (var h in Model.HisseListesi)
+                            {
+                                <option value="@h">@h</option>
+                            }
+                        </select>
+                        <span asp-validation-for="HisseAdi" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Lot" class="form-label">Lot</label>
+                        <input asp-for="Lot" class="form-control" type="number" min="1" />
+                        <span asp-validation-for="Lot" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="AlisFiyati" class="form-label">Limit Fiyat</label>
+                        <input asp-for="AlisFiyati" class="form-control" type="number" step="0.01" min="0.01" />
+                        <span asp-validation-for="AlisFiyati" class="text-danger"></span>
+                        <div class="form-text">Piyasa fiyati bu fiyata esit veya altina dustugunde emir gerceklesir.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Aciklama" class="form-label">Aciklama (opsiyonel)</label>
+                        <input asp-for="Aciklama" class="form-control" maxlength="200" />
+                    </div>
+                    <button type="submit" class="btn btn-primary">Emir Olustur</button>
+                    <a asp-page="/CoreRapor" class="btn btn-secondary">Geri</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.BekleyenEmirler.Any())
+{
+    <div class="row mt-4">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header">Bekleyen Emirler</div>
+                <div class="card-body p-0">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Hisse</th>
+                                <th class="text-end">Lot</th>
+                                <th class="text-end">Limit Fiyat</th>
+                                <th>Aciklama</th>
+                                <th>Olusturma</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var e in Model.BekleyenEmirler)
+                            {
+                                <tr>
+                                    <td><strong>@e.HisseAdi</strong></td>
+                                    <td class="text-end">@e.Lot</td>
+                                    <td class="text-end">@e.AlisFiyati.ToString("N2")</td>
+                                    <td>@(e.Aciklama ?? "-")</td>
+                                    <td>@e.OlusturmaTarihi.ToString("dd.MM.yyyy HH:mm")</td>
+                                    <td>
+                                        <form method="post" asp-page-handler="Iptal" style="display:inline">
+                                            <input type="hidden" name="id" value="@e.Id" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('Bu emri iptal etmek istediginize emin misiniz?')">
+                                                Iptal
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+}

@@ -788,6 +788,53 @@ public class DatabaseManager
     }
 
     // =============================================
+    // Manuel Emir Metodlari
+    // =============================================
+
+    public static System.Collections.Generic.List<ManuelEmir> ManuelEmirGetir(string hisseAdi = null)
+    {
+        var list = new System.Collections.Generic.List<ManuelEmir>();
+
+        using (System.Data.SqlClient.SqlConnection connection = new System.Data.SqlClient.SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+            cmd.CommandText = "[dbo].[sel_manuelEmir]";
+
+            if (hisseAdi != null)
+                cmd.Parameters.AddWithValue("@HisseAdi", hisseAdi);
+
+            using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    ManuelEmir emir = MapFromDataReader<ManuelEmir>(reader);
+                    list.Add(emir);
+                }
+            }
+        }
+
+        return list;
+    }
+
+    public static void ManuelEmirGuncelle(long id, int durum, double? gercekFiyat = null)
+    {
+        var conn = OpenConnection();
+
+        System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
+        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+        cmd.Connection = conn;
+        cmd.CommandText = "[dbo].[upd_manuelEmir]";
+        cmd.Parameters.AddWithValue("@Id", id);
+        cmd.Parameters.AddWithValue("@Durum", durum);
+        cmd.Parameters.AddWithValue("@GercekFiyat", gercekFiyat.HasValue ? (object)gercekFiyat.Value : System.DBNull.Value);
+        cmd.ExecuteNonQuery();
+        cmd.Connection.Close();
+    }
+
+    // =============================================
     // Yutan Mum Stratejisi Metodlari
     // =============================================
 

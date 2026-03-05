@@ -43,6 +43,13 @@ public class YutanMumStrateji
         if (IdealManager.YutanMumSaatiKontrolEt(Sistem, config.IslemSaati))
             return;
 
+        // Cuma gunu tarama yapma — haftasonu riski
+        if (System.DateTime.Now.DayOfWeek == System.DayOfWeek.Friday)
+        {
+            sonTaramaTarihi = bugun;
+            return;
+        }
+
         // XU100 endeks filtresi — endeks negatifse sinyal uretme
         double xu100Yuzde = IdealManager.Bist100EndeksYuzde(Sistem);
         if (xu100Yuzde <= 0)
@@ -281,11 +288,11 @@ public class YutanMumStrateji
                 if (satisFiyati <= 0)
                     continue; // Devre kesici vb. — sonraki dongude tekrar dene
 
-                // OVERNIGHT zararda + KademeStrateji hissesiyse → Grid'e devret, satma
+                // OVERNIGHT zararda + KademeStrateji aktif hissesiyse → Grid'e devret, satma
                 if (neden == "OVERNIGHT" && satisFiyati < hareket.AlisFiyati)
                 {
                     Hisse hisse = DatabaseManager.HisseGetir(hareket.HisseAdi);
-                    if (hisse != null)
+                    if (hisse != null && hisse.AlisAktif && hisse.SatisAktif)
                     {
                         // Grid pozisyonu olarak kaydet
                         var gridPoz = new HisseHareket();
@@ -307,6 +314,14 @@ public class YutanMumStrateji
                             hareket.Lot * (satisFiyati - hareket.AlisFiyati)));
                         continue;
                     }
+                }
+
+                // KAR_ALDI zararda satis korumasi — hisse bazinda zarardaysa satma
+                if (neden == "KAR_ALDI" && satisFiyati < hareket.AlisFiyati)
+                {
+                    Sistem.Mesaj(string.Format("[YM] KAR_ALDI ATLANDI: {0} Lot:{1} Alis:{2:F2} Guncel:{3:F2} (zararda)",
+                        hareket.HisseAdi, hareket.Lot, hareket.AlisFiyati, satisFiyati));
+                    continue;
                 }
 
                 IdealManager.Sat(Sistem, hareket.HisseAdi, hareket.Lot, satisFiyati);

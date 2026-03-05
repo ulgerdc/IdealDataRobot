@@ -75,6 +75,7 @@
     <Compile Include="YutanMumBatch.cs" />
     <Compile Include="YutanMumHareket.cs" />
     <Compile Include="YutanMumStrateji.cs" />
+    <Compile Include="ManuelEmir.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

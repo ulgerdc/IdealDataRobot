@@ -73,17 +73,28 @@ public class ArbitrajStratejiGelismis
         double bist100Yuzde, double bist30Yuzde, double viop30Yuzde,
         double globalButce, ref double acikTutar)
     {
-        double bistFiyat = IdealManager.AlisFiyatiGetir(Sistem, config.HisseAdi);
-        double viopFiyat = IdealManager.ViopSatisFiyatiGetirVade(Sistem, config.HisseAdi, config.YakinVadeKodu);
+        // Giris icin: BIST ask (alis), VIOP bid (satis)
+        double bistAsk = IdealManager.AlisFiyatiGetir(Sistem, config.HisseAdi);
+        double viopBid = IdealManager.ViopSatisFiyatiGetirVade(Sistem, config.HisseAdi, config.YakinVadeKodu);
+        // Cikis icin: BIST bid (satis), VIOP ask (alis)
+        double bistBid = bistAsk;
+        double viopAsk = viopBid;
+        try { bistBid = IdealManager.SatisFiyatiGetir(Sistem, config.HisseAdi); } catch { }
+        try { viopAsk = IdealManager.ViopAlisFiyatiGetirVade(Sistem, config.HisseAdi, config.YakinVadeKodu); } catch { }
+        if (bistBid <= 0) bistBid = bistAsk;
+        if (viopAsk <= 0) viopAsk = viopBid;
 
-        if (bistFiyat <= 0 || viopFiyat <= 0)
+        if (bistAsk <= 0 || viopBid <= 0)
             return;
 
-        double spreadTutar = viopFiyat - bistFiyat;
-        double spreadYuzde = (spreadTutar / bistFiyat) * 100;
+        // Spread hesabi: mid fiyatlarla (bid-ask maliyetini icermez)
+        double bistMid = (bistAsk + bistBid) / 2;
+        double viopMid = (viopAsk + viopBid) / 2;
+        double spreadTutar = viopMid - bistMid;
+        double spreadYuzde = (spreadTutar / bistMid) * 100;
 
         int kalanGun = KalanGunHesapla(config.YakinVadeSonGun);
-        double adilSpread = AdilSpreadHesapla(config.YillikFaiz, kalanGun, config.TemettuTutar, config.TemettuTarihi, bistFiyat);
+        double adilSpread = AdilSpreadHesapla(config.YillikFaiz, kalanGun, config.TemettuTutar, config.TemettuTarihi, bistMid);
         double netPrim = spreadYuzde - adilSpread;
 
         // Aktif pozisyon kontrol
@@ -99,12 +110,15 @@ public class ArbitrajStratejiGelismis
 
             if (cikisSinyali)
             {
-                // EMIR: VIOP alis (short kapama) + BIST satis
-                // IdealManager.ViopAlVade(Sistem, config.HisseAdi, config.YakinVadeKodu, config.ViopLot, viopFiyat);
-                // IdealManager.Sat(Sistem, config.HisseAdi, config.BistLot, bistFiyat);
+                // EMIR: VIOP alis (short kapama, ask) + BIST satis (bid)
+                if (EmirAktifMi(config.HisseAdi))
+                {
+                    IdealManager.ViopAlVade(Sistem, config.HisseAdi, config.YakinVadeKodu, config.ViopLot, viopAsk);
+                    IdealManager.Sat(Sistem, config.HisseAdi, config.BistLot, bistBid);
+                }
 
-                aktifPozisyon.Bacak1CikisFiyat = bistFiyat;
-                aktifPozisyon.Bacak2CikisFiyat = viopFiyat;
+                aktifPozisyon.Bacak1CikisFiyat = bistBid;
+                aktifPozisyon.Bacak2CikisFiyat = viopAsk;
                 aktifPozisyon.CikisSpreadYuzde = spreadYuzde;
                 DatabaseManager.ArbitrajGelismisHareketGuncelle(aktifPozisyon);
 
@@ -113,8 +127,8 @@ public class ArbitrajStratejiGelismis
                     "ARB Spot-VIOP CIKIS YAPILDI: spread %" + spreadYuzde.ToString("F2")
                     + ", adil %" + adilSpread.ToString("F2")
                     + ", prim %" + netPrim.ToString("F2")
-                    + ", BIST:" + bistFiyat.ToString("F2")
-                    + ", VIOP:" + viopFiyat.ToString("F2")
+                    + ", BIST:" + bistBid.ToString("F2")
+                    + ", VIOP:" + viopAsk.ToString("F2")
                     + ", girisSpread %" + aktifPozisyon.GirisSpreadYuzde.ToString("F2"));
             }
             else
@@ -129,7 +143,8 @@ public class ArbitrajStratejiGelismis
 
             if (girisSinyali)
             {
-                double yeniTutar = bistFiyat * config.BistLot + viopFiyat * config.ViopLot;
+                // Giris: BIST alis (ask) + VIOP satis (bid)
+                double yeniTutar = bistAsk * config.BistLot + viopBid * config.ViopLot;
                 if (acikTutar + yeniTutar > globalButce)
                 {
                     girisSinyali = false;
@@ -142,9 +157,12 @@ public class ArbitrajStratejiGelismis
 
             if (girisSinyali)
             {
-                // EMIR: BIST alis + VIOP satis (short)
-                // IdealManager.Al(Sistem, config.HisseAdi, config.BistLot, bistFiyat);
-                // IdealManager.ViopSatVade(Sistem, config.HisseAdi, config.YakinVadeKodu, config.ViopLot, viopFiyat);
+                // EMIR: BIST alis (ask) + VIOP satis short (bid)
+                if (EmirAktifMi(config.HisseAdi))
+                {
+                    IdealManager.Al(Sistem, config.HisseAdi, config.BistLot, bistAsk);
+                    IdealManager.ViopSatVade(Sistem, config.HisseAdi, config.YakinVadeKodu, config.ViopLot, viopBid);
+                }
 
                 var yeniHareket = new ArbitrajGelismisHareket
                 {
@@ -155,25 +173,25 @@ public class ArbitrajStratejiGelismis
                     ArbitrajTipi = 0,
                     Bacak1Sembol = "IMKBH'" + config.HisseAdi,
                     Bacak1Yon = "ALIS",
-                    Bacak1GirisFiyat = bistFiyat,
+                    Bacak1GirisFiyat = bistAsk,
                     Bacak1Lot = config.BistLot,
                     Bacak2Sembol = IdealManager.ViopSembolOlustur(config.HisseAdi, config.YakinVadeKodu),
                     Bacak2Yon = "SATIS",
-                    Bacak2GirisFiyat = viopFiyat,
+                    Bacak2GirisFiyat = viopBid,
                     Bacak2Lot = config.ViopLot,
                     GirisSpreadYuzde = spreadYuzde
                 };
                 DatabaseManager.ArbitrajGelismisHareketGuncelle(yeniHareket);
 
-                acikTutar += bistFiyat * config.BistLot + viopFiyat * config.ViopLot;
+                acikTutar += bistAsk * config.BistLot + viopBid * config.ViopLot;
 
                 durum = " >>> GIRIS YAPILDI <<<";
                 DatabaseManager.RiskDetayEkle(config.HisseAdi,
                     "ARB Spot-VIOP GIRIS YAPILDI: spread %" + spreadYuzde.ToString("F2")
                     + ", adil %" + adilSpread.ToString("F2")
                     + ", prim %" + netPrim.ToString("F2")
-                    + ", BIST:" + bistFiyat.ToString("F2")
-                    + ", VIOP:" + viopFiyat.ToString("F2")
+                    + ", BIST:" + bistAsk.ToString("F2")
+                    + ", VIOP:" + viopBid.ToString("F2")
                     + ", vade:" + config.YakinVadeKodu
                     + ", kalanGun:" + kalanGun);
             }
@@ -181,8 +199,8 @@ public class ArbitrajStratejiGelismis
 
         if (durum.Contains("YAPILDI"))
         {
-            sb.AppendLine(config.HisseAdi + " [SV] BIST:" + bistFiyat.ToString("F2")
-                + " VIOP(" + config.YakinVadeKodu + "):" + viopFiyat.ToString("F2")
+            sb.AppendLine(config.HisseAdi + " [SV] BIST:" + bistMid.ToString("F2")
+                + " VIOP(" + config.YakinVadeKodu + "):" + viopMid.ToString("F2")
                 + " Spread:" + spreadYuzde.ToString("F2") + "%"
                 + " Prim:" + netPrim.ToString("F2") + "%"
                 + " [" + kalanGun + "g]" + durum);
@@ -193,7 +211,7 @@ public class ArbitrajStratejiGelismis
             bool logGiris = aktifPozisyon == null && netPrim >= config.GirisMarji;
             bool logCikis = aktifPozisyon != null && netPrim <= config.CikisMarji;
             DatabaseManager.ArbitrajSpreadLogKaydet(config.Id, config.HisseAdi, config.ArbitrajTipi,
-                bistFiyat, viopFiyat, spreadYuzde, spreadTutar,
+                bistMid, viopMid, spreadYuzde, spreadTutar,
                 logGiris, logCikis, atlanmaAciklamasi,
                 bist100Yuzde, bist30Yuzde, viop30Yuzde,
                 adilSpread, netPrim, kalanGun);
@@ -207,21 +225,30 @@ public class ArbitrajStratejiGelismis
         if (string.IsNullOrEmpty(config.UzakVadeKodu))
             return;
 
-        double yakinFiyat = IdealManager.ViopSatisFiyatiGetirVade(Sistem, config.HisseAdi, config.YakinVadeKodu);
-        double uzakFiyat = IdealManager.ViopAlisFiyatiGetirVade(Sistem, config.HisseAdi, config.UzakVadeKodu);
+        // 4 fiyat: her vade icin bid (satis) ve ask (alis)
+        double yakinBid = 0, yakinAsk = 0, uzakBid = 0, uzakAsk = 0;
+        try { yakinBid = IdealManager.ViopSatisFiyatiGetirVade(Sistem, config.HisseAdi, config.YakinVadeKodu); } catch { }
+        try { yakinAsk = IdealManager.ViopAlisFiyatiGetirVade(Sistem, config.HisseAdi, config.YakinVadeKodu); } catch { }
+        try { uzakBid = IdealManager.ViopSatisFiyatiGetirVade(Sistem, config.HisseAdi, config.UzakVadeKodu); } catch { }
+        try { uzakAsk = IdealManager.ViopAlisFiyatiGetirVade(Sistem, config.HisseAdi, config.UzakVadeKodu); } catch { }
+        if (yakinAsk <= 0) yakinAsk = yakinBid;
+        if (uzakBid <= 0) uzakBid = uzakAsk;
 
-        if (yakinFiyat <= 0 || uzakFiyat <= 0)
+        if (yakinBid <= 0 || uzakAsk <= 0)
             return;
 
-        double spreadTutar = uzakFiyat - yakinFiyat;
-        double spreadYuzde = (spreadTutar / yakinFiyat) * 100;
+        // Spread hesabi: mid fiyatlarla (bid-ask maliyetini icermez)
+        double yakinMid = (yakinBid + yakinAsk) / 2;
+        double uzakMid = (uzakBid + uzakAsk) / 2;
+        double spreadTutar = uzakMid - yakinMid;
+        double spreadYuzde = (spreadTutar / yakinMid) * 100;
         string yon = spreadYuzde > 0 ? "Contango" : "Backwardation";
         bool contango = spreadYuzde > 0;
 
         int kalanGunYakin = KalanGunHesapla(config.YakinVadeSonGun);
         int kalanGunUzak = KalanGunHesapla(config.UzakVadeSonGun);
         int vadeFarki = kalanGunUzak - kalanGunYakin;
-        double adilSpread = AdilSpreadHesapla(config.YillikFaiz, vadeFarki, config.TemettuTutar, config.TemettuTarihi, yakinFiyat);
+        double adilSpread = AdilSpreadHesapla(config.YillikFaiz, vadeFarki, config.TemettuTutar, config.TemettuTarihi, yakinMid);
         double netPrim = System.Math.Abs(spreadYuzde) - adilSpread;
 
         // Aktif pozisyon kontrol
@@ -237,21 +264,30 @@ public class ArbitrajStratejiGelismis
 
             if (cikisSinyali)
             {
-                // Cikis: ters islem
-                // Giris ALIS idi → cikis SATIS, giris SATIS idi → cikis ALIS
-                // IdealManager.ViopSatVade(Sistem, config.HisseAdi, aktifPozisyon.Bacak1Yon == "ALIS" ? config.YakinVadeKodu : config.UzakVadeKodu, config.ViopLot, aktifPozisyon.Bacak1Yon == "ALIS" ? yakinFiyat : uzakFiyat);
-                // IdealManager.ViopAlVade(Sistem, config.HisseAdi, aktifPozisyon.Bacak2Yon == "SATIS" ? config.UzakVadeKodu : config.YakinVadeKodu, config.ViopLot, aktifPozisyon.Bacak2Yon == "SATIS" ? uzakFiyat : yakinFiyat);
+                // Cikis: ters islem — ALIS bacagi icin SATIS (bid), SATIS bacagi icin ALIS (ask)
+                if (EmirAktifMi(config.HisseAdi))
+                {
+                    if (aktifPozisyon.Bacak1Yon == "ALIS")
+                    {
+                        IdealManager.ViopSatVade(Sistem, config.HisseAdi, config.YakinVadeKodu, config.ViopLot, yakinBid);
+                        IdealManager.ViopAlVade(Sistem, config.HisseAdi, config.UzakVadeKodu, config.ViopLot, uzakAsk);
+                    }
+                    else
+                    {
+                        IdealManager.ViopAlVade(Sistem, config.HisseAdi, config.YakinVadeKodu, config.ViopLot, yakinAsk);
+                        IdealManager.ViopSatVade(Sistem, config.HisseAdi, config.UzakVadeKodu, config.ViopLot, uzakBid);
+                    }
+                }
 
-                // Cikis fiyatlari: bacak1 yakin vade, bacak2 uzak vade
                 if (aktifPozisyon.Bacak1Yon == "ALIS")
                 {
-                    aktifPozisyon.Bacak1CikisFiyat = yakinFiyat;
-                    aktifPozisyon.Bacak2CikisFiyat = uzakFiyat;
+                    aktifPozisyon.Bacak1CikisFiyat = yakinBid;
+                    aktifPozisyon.Bacak2CikisFiyat = uzakAsk;
                 }
                 else
                 {
-                    aktifPozisyon.Bacak1CikisFiyat = yakinFiyat;
-                    aktifPozisyon.Bacak2CikisFiyat = uzakFiyat;
+                    aktifPozisyon.Bacak1CikisFiyat = yakinAsk;
+                    aktifPozisyon.Bacak2CikisFiyat = uzakBid;
                 }
                 aktifPozisyon.CikisSpreadYuzde = spreadYuzde;
                 DatabaseManager.ArbitrajGelismisHareketGuncelle(aktifPozisyon);
@@ -276,7 +312,10 @@ public class ArbitrajStratejiGelismis
 
             if (girisSinyali)
             {
-                double yeniTutar = yakinFiyat * config.ViopLot + uzakFiyat * config.ViopLot;
+                // Butce hesabi: gercek emir fiyatlariyla
+                double bacak1Fiyat = contango ? yakinAsk : yakinBid;
+                double bacak2Fiyat = contango ? uzakBid : uzakAsk;
+                double yeniTutar = bacak1Fiyat * config.ViopLot + bacak2Fiyat * config.ViopLot;
                 if (acikTutar + yeniTutar > globalButce)
                 {
                     girisSinyali = false;
@@ -289,13 +328,26 @@ public class ArbitrajStratejiGelismis
 
             if (girisSinyali)
             {
-                // Contango: yakin vade ALIS + uzak vade SATIS
-                // Backwardation: yakin vade SATIS + uzak vade ALIS
+                // Contango: yakin vade ALIS (ask) + uzak vade SATIS (bid)
+                // Backwardation: yakin vade SATIS (bid) + uzak vade ALIS (ask)
                 string bacak1Yon = contango ? "ALIS" : "SATIS";
                 string bacak2Yon = contango ? "SATIS" : "ALIS";
+                double bacak1Fiyat = contango ? yakinAsk : yakinBid;
+                double bacak2Fiyat = contango ? uzakBid : uzakAsk;
 
-                // IdealManager.ViopAlVade(Sistem, config.HisseAdi, contango ? config.YakinVadeKodu : config.UzakVadeKodu, config.ViopLot, contango ? yakinFiyat : uzakFiyat);
-                // IdealManager.ViopSatVade(Sistem, config.HisseAdi, contango ? config.UzakVadeKodu : config.YakinVadeKodu, config.ViopLot, contango ? uzakFiyat : yakinFiyat);
+                if (EmirAktifMi(config.HisseAdi))
+                {
+                    if (contango)
+                    {
+                        IdealManager.ViopAlVade(Sistem, config.HisseAdi, config.YakinVadeKodu, config.ViopLot, yakinAsk);
+                        IdealManager.ViopSatVade(Sistem, config.HisseAdi, config.UzakVadeKodu, config.ViopLot, uzakBid);
+                    }
+                    else
+                    {
+                        IdealManager.ViopSatVade(Sistem, config.HisseAdi, config.YakinVadeKodu, config.ViopLot, yakinBid);
+                        IdealManager.ViopAlVade(Sistem, config.HisseAdi, config.UzakVadeKodu, config.ViopLot, uzakAsk);
+                    }
+                }
 
                 var yeniHareket = new ArbitrajGelismisHareket
                 {
@@ -306,17 +358,17 @@ public class ArbitrajStratejiGelismis
                     ArbitrajTipi = 1,
                     Bacak1Sembol = IdealManager.ViopSembolOlustur(config.HisseAdi, config.YakinVadeKodu),
                     Bacak1Yon = bacak1Yon,
-                    Bacak1GirisFiyat = yakinFiyat,
+                    Bacak1GirisFiyat = bacak1Fiyat,
                     Bacak1Lot = config.ViopLot,
                     Bacak2Sembol = IdealManager.ViopSembolOlustur(config.HisseAdi, config.UzakVadeKodu),
                     Bacak2Yon = bacak2Yon,
-                    Bacak2GirisFiyat = uzakFiyat,
+                    Bacak2GirisFiyat = bacak2Fiyat,
                     Bacak2Lot = config.ViopLot,
                     GirisSpreadYuzde = spreadYuzde
                 };
                 DatabaseManager.ArbitrajGelismisHareketGuncelle(yeniHareket);
 
-                acikTutar += yakinFiyat * config.ViopLot + uzakFiyat * config.ViopLot;
+                acikTutar += bacak1Fiyat * config.ViopLot + bacak2Fiyat * config.ViopLot;
 
                 durum = " >>> GIRIS YAPILDI <<<";
                 DatabaseManager.RiskDetayEkle(config.HisseAdi,
@@ -324,16 +376,16 @@ public class ArbitrajStratejiGelismis
                     + " (" + yon + ")"
                     + ", adil %" + adilSpread.ToString("F2")
                     + ", prim %" + netPrim.ToString("F2")
-                    + ", Yakin(" + config.YakinVadeKodu + "):" + yakinFiyat.ToString("F2")
-                    + ", Uzak(" + config.UzakVadeKodu + "):" + uzakFiyat.ToString("F2")
+                    + ", Yakin(" + config.YakinVadeKodu + "):" + bacak1Fiyat.ToString("F2")
+                    + ", Uzak(" + config.UzakVadeKodu + "):" + bacak2Fiyat.ToString("F2")
                     + ", kalanGun Y:" + kalanGunYakin + " U:" + kalanGunUzak);
             }
         }
 
         if (durum.Contains("YAPILDI"))
         {
-            sb.AppendLine(config.HisseAdi + " [TS] Y:" + yakinFiyat.ToString("F2") + "(" + config.YakinVadeKodu + ")"
-                + " U:" + uzakFiyat.ToString("F2") + "(" + config.UzakVadeKodu + ")"
+            sb.AppendLine(config.HisseAdi + " [TS] Y:" + yakinMid.ToString("F2") + "(" + config.YakinVadeKodu + ")"
+                + " U:" + uzakMid.ToString("F2") + "(" + config.UzakVadeKodu + ")"
                 + " Spread:" + spreadYuzde.ToString("F2") + "% " + yon
                 + " Prim:" + netPrim.ToString("F2") + "%"
                 + " [Y:" + kalanGunYakin + "g U:" + kalanGunUzak + "g]" + durum);
@@ -344,11 +396,16 @@ public class ArbitrajStratejiGelismis
             bool logGiris = aktifPozisyon == null && netPrim >= config.GirisMarji;
             bool logCikis = aktifPozisyon != null && netPrim <= config.CikisMarji;
             DatabaseManager.ArbitrajSpreadLogKaydet(config.Id, config.HisseAdi, config.ArbitrajTipi,
-                yakinFiyat, uzakFiyat, spreadYuzde, spreadTutar,
+                yakinMid, uzakMid, spreadYuzde, spreadTutar,
                 logGiris, logCikis, atlanmaAciklamasi,
                 bist100Yuzde, bist30Yuzde, viop30Yuzde,
                 adilSpread, netPrim, kalanGunYakin);
         }
+    }
+
+    static bool EmirAktifMi(string hisseAdi)
+    {
+        return false;
     }
 
     static bool SpreadDegistiMi(long configId, double guncelSpread)
