@@ -20,7 +20,9 @@ namespace StockPortfolioReports.Pages
         // Ozet kartlar
         public int ToplamAdet { get; set; }
         public int ToplamLot { get; set; }
-        public decimal ToplamMaliyet { get; set; }
+        public decimal ToplamBrutMaliyet { get; set; }
+        public decimal ToplamGerceklesenKar { get; set; }
+        public decimal ToplamNetMaliyet { get; set; }
         public decimal ToplamGuncelDeger { get; set; }
         public decimal ToplamKZ { get; set; }
 
@@ -48,9 +50,9 @@ namespace StockPortfolioReports.Pages
                 coreQuery = coreQuery.Where(h => h.HisseAdi == HisseFiltre);
             var corePozisyonlar = await coreQuery.ToListAsync();
 
-            // Kapanmis Core pozisyonlar
-            var kapananCoreQuery = _context.HisseHareket
-                .Where(h => h.PozisyonTipi == 1 && h.AktifMi == false);
+            // Kapanmis Core pozisyonlar (vHisseHareket view — arsiv dahil)
+            var kapananCoreQuery = _context.VHisseHareket
+                .Where(h => h.PozisyonTipi == 1 && h.AktifMi == 0);
             if (!string.IsNullOrEmpty(HisseFiltre))
                 kapananCoreQuery = kapananCoreQuery.Where(h => h.HisseAdi == HisseFiltre);
             var kapananCoreler = await kapananCoreQuery.ToListAsync();
@@ -72,10 +74,11 @@ namespace StockPortfolioReports.Pages
                 var kapananlar = kapananCoreler.Where(h => h.HisseAdi == hisse).ToList();
                 var guncelFiyat = hisseFiyatlar.GetValueOrDefault(hisse);
 
-                var aktifMaliyet = aktifler.Sum(h => h.AlisFiyati * h.Lot);
+                var brutMaliyet = aktifler.Sum(h => h.AlisFiyati * h.Lot);
                 var aktifGuncelDeger = aktifler.Sum(h => guncelFiyat * h.Lot);
-                var aktifKZ = aktifGuncelDeger - aktifMaliyet;
                 var gerceklesenKar = kapananlar.Sum(h => h.Kar ?? 0);
+                var netMaliyet = brutMaliyet - gerceklesenKar;
+                var aktifKZ = aktifGuncelDeger - netMaliyet;
 
                 return new CoreHisseDto
                 {
@@ -83,15 +86,16 @@ namespace StockPortfolioReports.Pages
                     AktifAdet = aktifler.Count,
                     AktifLot = aktifler.Sum(h => h.Lot),
                     OrtMaliyet = aktifler.Sum(h => h.Lot) > 0
-                        ? Math.Round(aktifMaliyet / aktifler.Sum(h => h.Lot), 2) : 0,
+                        ? Math.Round(brutMaliyet / aktifler.Sum(h => h.Lot), 2) : 0,
                     GuncelFiyat = guncelFiyat,
-                    Maliyet = aktifMaliyet,
+                    BrutMaliyet = brutMaliyet,
+                    GerceklesenKar = gerceklesenKar,
+                    NetMaliyet = netMaliyet,
                     GuncelDeger = aktifGuncelDeger,
                     AktifKZ = aktifKZ,
-                    AktifKZYuzde = aktifMaliyet > 0
-                        ? Math.Round((double)(aktifKZ / aktifMaliyet * 100), 2) : 0,
+                    AktifKZYuzde = netMaliyet > 0
+                        ? Math.Round((double)(aktifKZ / netMaliyet * 100), 2) : 0,
                     KapananAdet = kapananlar.Count,
-                    GerceklesenKar = gerceklesenKar,
                     OrtTutmaGun = aktifler.Count > 0
                         ? Math.Round(aktifler.Average(h => (DateTime.Now - h.AlisTarihi).TotalDays), 1) : 0
                 };
@@ -102,9 +106,11 @@ namespace StockPortfolioReports.Pages
             // Ozet kartlar
             ToplamAdet = HisseDetaylari.Sum(h => h.AktifAdet);
             ToplamLot = HisseDetaylari.Sum(h => h.AktifLot);
-            ToplamMaliyet = HisseDetaylari.Sum(h => h.Maliyet);
+            ToplamBrutMaliyet = HisseDetaylari.Sum(h => h.BrutMaliyet);
+            ToplamGerceklesenKar = HisseDetaylari.Sum(h => h.GerceklesenKar);
+            ToplamNetMaliyet = ToplamBrutMaliyet - ToplamGerceklesenKar;
             ToplamGuncelDeger = HisseDetaylari.Sum(h => h.GuncelDeger);
-            ToplamKZ = ToplamGuncelDeger - ToplamMaliyet;
+            ToplamKZ = ToplamGuncelDeger - ToplamNetMaliyet;
 
             // Grafik JSON
             var grafikData = HisseDetaylari
@@ -127,12 +133,13 @@ namespace StockPortfolioReports.Pages
             public int AktifLot { get; set; }
             public decimal OrtMaliyet { get; set; }
             public decimal GuncelFiyat { get; set; }
-            public decimal Maliyet { get; set; }
+            public decimal BrutMaliyet { get; set; }
+            public decimal GerceklesenKar { get; set; }
+            public decimal NetMaliyet { get; set; }
             public decimal GuncelDeger { get; set; }
             public decimal AktifKZ { get; set; }
             public double AktifKZYuzde { get; set; }
             public int KapananAdet { get; set; }
-            public decimal GerceklesenKar { get; set; }
             public double OrtTutmaGun { get; set; }
         }
     }

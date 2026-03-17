@@ -25,41 +25,54 @@
 
 <!-- Ozet Kartlari -->
 <div class="row mb-4">
-    <div class="col-md-3">
+    <div class="col-md-2">
         <div class="card bg-dark text-white">
             <div class="card-body">
                 <h6 class="card-title">Aktif Core</h6>
                 <h4>@Model.ToplamAdet poz / @Model.ToplamLot lot</h4>
-                <small>Bekleyen pozisyonlar</small>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
         <div class="card bg-primary text-white">
             <div class="card-body">
-                <h6 class="card-title">Toplam Maliyet</h6>
-                <h4>@Model.ToplamMaliyet.ToString("N0") TL</h4>
-                <small>Alis maliyeti</small>
+                <h6 class="card-title">Brut Maliyet</h6>
+                <h4>@Model.ToplamBrutMaliyet.ToString("N0") TL</h4>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
+        <div class="card text-white @(Model.ToplamGerceklesenKar >= 0 ? "bg-success" : "bg-danger")">
+            <div class="card-body">
+                <h6 class="card-title">Gerceklesen Kar</h6>
+                <h4>@Model.ToplamGerceklesenKar.ToString("N0") TL</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h6 class="card-title">Net Maliyet</h6>
+                <h4>@Model.ToplamNetMaliyet.ToString("N0") TL</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
         <div class="card bg-secondary text-white">
             <div class="card-body">
                 <h6 class="card-title">Guncel Deger</h6>
                 <h4>@Model.ToplamGuncelDeger.ToString("N0") TL</h4>
-                <small>Piyasa degeri</small>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
         <div class="card text-white @(Model.ToplamKZ >= 0 ? "bg-success" : "bg-danger")">
             <div class="card-body">
-                <h6 class="card-title">Acik K/Z</h6>
+                <h6 class="card-title">Toplam K/Z</h6>
                 <h4>@Model.ToplamKZ.ToString("N2") TL</h4>
-                @if (Model.ToplamMaliyet > 0)
+                @if (Model.ToplamNetMaliyet > 0)
                 {
-                    <small>%@((Model.ToplamKZ / Model.ToplamMaliyet * 100).ToString("N2"))</small>
+                    <small>%@((Model.ToplamKZ / Model.ToplamNetMaliyet * 100).ToString("N2"))</small>
                 }
             </div>
         </div>
@@ -80,13 +93,14 @@
                     <th class="text-end">Lot</th>
                     <th class="text-end">Ort Maliyet</th>
                     <th class="text-end">Guncel Fiyat</th>
-                    <th class="text-end">Maliyet TL</th>
+                    <th class="text-end">Brut Maliyet</th>
+                    <th class="text-end">Gerceklesen</th>
+                    <th class="text-end">Net Maliyet</th>
                     <th class="text-end">Guncel Deger</th>
-                    <th class="text-end">Acik K/Z</th>
+                    <th class="text-end">K/Z</th>
                     <th class="text-end">K/Z %</th>
                     <th class="text-end">Ort Gun</th>
                     <th class="text-end">Kapanan</th>
-                    <th class="text-end">Gerceklesen</th>
                 </tr>
             </thead>
             <tbody>
@@ -98,7 +112,11 @@
                         <td class="text-end">@h.AktifLot</td>
                         <td class="text-end">@h.OrtMaliyet.ToString("N2")</td>
                         <td class="text-end">@h.GuncelFiyat.ToString("N2")</td>
-                        <td class="text-end">@h.Maliyet.ToString("N0")</td>
+                        <td class="text-end">@h.BrutMaliyet.ToString("N0")</td>
+                        <td class="text-end @(h.GerceklesenKar >= 0 ? "text-success" : "text-danger")">
+                            @h.GerceklesenKar.ToString("N0")
+                        </td>
+                        <td class="text-end text-info"><strong>@h.NetMaliyet.ToString("N0")</strong></td>
                         <td class="text-end">@h.GuncelDeger.ToString("N0")</td>
                         <td class="text-end @(h.AktifKZ >= 0 ? "text-success" : "text-danger")">
                             <strong>@h.AktifKZ.ToString("N2")</strong>
@@ -108,9 +126,6 @@
                         </td>
                         <td class="text-end">@h.OrtTutmaGun</td>
                         <td class="text-end">@h.KapananAdet</td>
-                        <td class="text-end @(h.GerceklesenKar >= 0 ? "text-success" : "text-danger")">
-                            @h.GerceklesenKar.ToString("N2")
-                        </td>
                     </tr>
                 }
             </tbody>
@@ -123,22 +138,23 @@
                         <td class="text-end">@Model.ToplamLot</td>
                         <td class="text-end">-</td>
                         <td class="text-end">-</td>
-                        <td class="text-end">@Model.ToplamMaliyet.ToString("N0")</td>
+                        <td class="text-end">@Model.ToplamBrutMaliyet.ToString("N0")</td>
+                        <td class="text-end @(Model.ToplamGerceklesenKar >= 0 ? "text-success" : "text-danger")">
+                            @Model.ToplamGerceklesenKar.ToString("N0")
+                        </td>
+                        <td class="text-end text-info"><strong>@Model.ToplamNetMaliyet.ToString("N0")</strong></td>
                         <td class="text-end">@Model.ToplamGuncelDeger.ToString("N0")</td>
                         <td class="text-end @(Model.ToplamKZ >= 0 ? "text-success" : "text-danger")">
                             <strong>@Model.ToplamKZ.ToString("N2")</strong>
                         </td>
                         <td class="text-end @(Model.ToplamKZ >= 0 ? "text-success" : "text-danger")">
-                            @if (Model.ToplamMaliyet > 0)
+                            @if (Model.ToplamNetMaliyet > 0)
                             {
-                                <text>%@((Model.ToplamKZ / Model.ToplamMaliyet * 100).ToString("N2"))</text>
+                                <text>%@((Model.ToplamKZ / Model.ToplamNetMaliyet * 100).ToString("N2"))</text>
                             }
                         </td>
                         <td class="text-end">-</td>
                         <td class="text-end">@Model.HisseDetaylari.Sum(h => h.KapananAdet)</td>
-                        <td class="text-end @(Model.HisseDetaylari.Sum(h => h.GerceklesenKar) >= 0 ? "text-success" : "text-danger")">
-                            @Model.HisseDetaylari.Sum(h => h.GerceklesenKar).ToString("N2")
-                        </td>
                     </tr>
                 </tfoot>
             }
