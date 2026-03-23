@@ -48,9 +48,9 @@ namespace StockPortfolioReports.Pages
                 .OrderBy(h => h)
                 .ToListAsync();
 
-            // Gundeki alislar
+            // Gundeki alislar (CoreSenkron haric — portfoy senkron kayitlari gercek islem degil)
             var alisQuery = _context.VHisseHareket
-                .Where(h => h.AlisTarihi >= gun && h.AlisTarihi < gunSonu);
+                .Where(h => h.AlisTarihi >= gun && h.AlisTarihi < gunSonu && h.RobotAdi != "CoreSenkron");
             if (!string.IsNullOrEmpty(HisseFiltre))
                 alisQuery = alisQuery.Where(h => h.HisseAdi == HisseFiltre);
             var alislar = await alisQuery.ToListAsync();
@@ -58,7 +58,7 @@ namespace StockPortfolioReports.Pages
             // Gundeki satislar (view uzerinden — arsivlenmis kayitlar da dahil)
             var satisQuery = _context.VHisseHareket
                 .Where(h => h.AktifMi == 0 && h.SatisTarihi != null
-                    && h.SatisTarihi >= gun && h.SatisTarihi < gunSonu);
+                    && h.SatisTarihi >= gun && h.SatisTarihi < gunSonu && h.RobotAdi != "CoreSenkron");
             if (!string.IsNullOrEmpty(HisseFiltre))
                 satisQuery = satisQuery.Where(h => h.HisseAdi == HisseFiltre);
             var satislar = await satisQuery.ToListAsync();

@@ -41,6 +41,7 @@ namespace StockPortfolioReports
         public decimal? CoreMarj { get; set; }
         public decimal? TrailingStopYuzde { get; set; }
         public decimal? ButceLimitYuzde { get; set; }
+        public bool? CoreSatisAktif { get; set; }
         public double? ButceAtrGecisYuzde { get; set; }
         public int? AtrPeriyot { get; set; }
         public decimal? AtrCarpan { get; set; }
@@ -82,6 +83,7 @@ namespace StockPortfolioReports
         public double TemettuTutar { get; set; }
         public DateTime? TemettuTarihi { get; set; }
         public double Butce { get; set; }
+        public double StopajOrani { get; set; }
         public DateTime? Tarih { get; set; }
     }
 
@@ -168,6 +170,22 @@ namespace StockPortfolioReports
         public double? MomentumYuzde { get; set; } // SQL float
     }
 
+    public class YutanMumConfig
+    {
+        public long Id { get; set; }
+        public double ToplamButce { get; set; }
+        public int MaxAktifBatch { get; set; }
+        public int MaxGunSayisi { get; set; }
+        public double MinHacimCarpani { get; set; }
+        public string IslemSaati { get; set; }
+        public double MinButcePerHisse { get; set; }
+        public bool AktifMi { get; set; }
+        public int SinyalTipi { get; set; }
+        public double CloseThreshold { get; set; }
+        public double MinMomentum { get; set; }
+        public bool OvernightMod { get; set; }
+    }
+
     public class ManuelEmir
     {
         public long Id { get; set; }
@@ -179,6 +197,25 @@ namespace StockPortfolioReports
         public DateTime? GerceklesmeTarihi { get; set; }
         public double? GercekFiyat { get; set; }
         public string? Aciklama { get; set; }
+    }
+
+    public class IdealPortfoy
+    {
+        public int Id { get; set; }
+        public string Sembol { get; set; }
+        public int Lot { get; set; }
+        public double Maliyet { get; set; }
+        public double GuncelFiyat { get; set; }
+        public double KarZarar { get; set; }
+        public DateTime GuncellemeTarihi { get; set; }
+    }
+
+    public class IdealHesap
+    {
+        public int Id { get; set; }
+        public double Bakiye { get; set; }
+        public double IslemLimit { get; set; }
+        public DateTime GuncellemeTarihi { get; set; }
     }
 
     // vHisseHareket view entity (HisseHareket + HisseHareketOcak24 + HisseEmir)
@@ -194,6 +231,7 @@ namespace StockPortfolioReports
         public DateTime AlisTarihi { get; set; }
         public int? AktifMi { get; set; }
         public int PozisyonTipi { get; set; }
+        public string? RobotAdi { get; set; }
     }
 
     public class ApplicationDbContext : DbContext
@@ -211,9 +249,12 @@ namespace StockPortfolioReports
         public DbSet<ArbitrajGelismisConfig> ArbitrajGelismis { get; set; }
         public DbSet<ArbitrajGelismisHareket> ArbitrajGelismisHareket { get; set; }
         public DbSet<ArbitrajSpreadLog> ArbitrajSpreadLog { get; set; }
+        public DbSet<YutanMumConfig> YutanMumConfig { get; set; }
         public DbSet<YutanMumBatch> YutanMumBatch { get; set; }
         public DbSet<YutanMumHareket> YutanMumHareket { get; set; }
         public DbSet<ManuelEmir> ManuelEmir { get; set; }
+        public DbSet<IdealPortfoy> IdealPortfoy { get; set; }
+        public DbSet<IdealHesap> IdealHesap { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

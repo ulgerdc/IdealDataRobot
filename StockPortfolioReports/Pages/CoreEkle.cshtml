@@ -38,9 +38,13 @@
                     </div>
                     <div class="mb-3">
                         <label asp-for="AlisFiyati" class="form-label">Limit Fiyat</label>
-                        <input asp-for="AlisFiyati" class="form-control" type="number" step="0.01" min="0.01" />
+                        <input asp-for="AlisFiyati" id="alisFiyati" class="form-control" type="number" step="0.01" min="0.01" />
                         <span asp-validation-for="AlisFiyati" class="text-danger"></span>
                         <div class="form-text">Piyasa fiyati bu fiyata esit veya altina dustugunde emir gerceklesir.</div>
+                    </div>
+                    <div class="mb-3 p-2 bg-light rounded">
+                        <label class="form-label fw-bold">Toplam Tutar</label>
+                        <div id="toplamTutar" class="fs-5">-</div>
                     </div>
                     <div class="mb-3">
                         <label asp-for="Aciklama" class="form-label">Aciklama (opsiyonel)</label>
@@ -53,6 +57,43 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+<script>
+    const hisseSelect = document.getElementById('HisseAdi');
+    const lotInput = document.getElementById('Lot');
+    const fiyatInput = document.getElementById('alisFiyati');
+    const aciklamaInput = document.getElementById('Aciklama');
+    const toplamDiv = document.getElementById('toplamTutar');
+
+    function hesaplaToplam() {
+        const lot = parseFloat(lotInput.value) || 0;
+        const fiyat = parseFloat(fiyatInput.value) || 0;
+        const toplam = lot * fiyat;
+        toplamDiv.textContent = toplam > 0 ? toplam.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' TL' : '-';
+    }
+
+    hisseSelect.addEventListener('change', async function () {
+        lotInput.value = '';
+        fiyatInput.value = '';
+        aciklamaInput.value = '';
+        toplamDiv.textContent = '-';
+
+        if (!this.value) return;
+
+        const resp = await fetch(`?handler=Fiyat&hisse=${encodeURIComponent(this.value)}`);
+        const data = await resp.json();
+        if (data.fiyat > 0) {
+            fiyatInput.value = data.fiyat.toFixed(2);
+            lotInput.focus();
+            hesaplaToplam();
+        }
+    });
+
+    lotInput.addEventListener('input', hesaplaToplam);
+    fiyatInput.addEventListener('input', hesaplaToplam);
+</script>
+}
 
 @if (Model.BekleyenEmirler.Any())
 {

@@ -64,11 +64,8 @@ public class KademeStratejiGelismis
             GelismisSatisYap(Sistem, hisseAdi, satisFiyati, marj, hisse);
         }
 
-        // ONCELIK 1.5: MANUEL EMIR KONTROL
-        if (IdealManager.AlisSaatiKontrolEt(Sistem) == false)
-        {
-            ManuelEmirKontrol(Sistem, hisseAdi, alisFiyati);
-        }
+        // ONCELIK 1.5: MANUEL EMIR KONTROL (saat kontrolu yok - her zaman calisir)
+        ManuelEmirKontrol(Sistem, hisseAdi, alisFiyati);
 
         // ONCELIK 2: ALIS ISLEMLERI
         if (IdealManager.AlisSaatiKontrolEt(Sistem) == false && hisse.AlisAktif)
@@ -189,25 +186,28 @@ public class KademeStratejiGelismis
         }
 
         // KATMAN 3: Core Pozisyon Cikisi (hedef veya trailing stop)
-        double coreMarj = hisse.CoreMarj > 0 ? hisse.CoreMarj : 100;
-        double trailingStop = hisse.TrailingStopYuzde > 0 ? hisse.TrailingStopYuzde : 5.0;
-
-        var coreSatislar = DatabaseManager.CoreSatimKontrol(hisseAdi, satisFiyati, coreMarj, trailingStop);
-        if (coreSatislar.Item1 > 0)
+        if (hisse.CoreSatisAktif)
         {
-            IdealManager.Sat(Sistem, hisse.HisseAdi, coreSatislar.Item1, satisFiyati);
-            foreach (var item in coreSatislar.Item2)
-            {
-                item.SatisFiyati = satisFiyati;
-                item.AktifMi = false;
-                DatabaseManager.HisseHareketEkleGuncelle(item);
-            }
-            DatabaseManager.RiskDetayEkle(hisseAdi,
-                string.Format("Core satis: {0} lot, fiyat: {1}", coreSatislar.Item1, satisFiyati));
-        }
+            double coreMarj = hisse.CoreMarj > 0 ? hisse.CoreMarj : 100;
+            double trailingStop = hisse.TrailingStopYuzde > 0 ? hisse.TrailingStopYuzde : 5.0;
 
-        // KATMAN 4: Trailing Stop Tepe Guncelleme
-        DatabaseManager.CoreTepeNoktasiGuncelle(hisseAdi, satisFiyati);
+            var coreSatislar = DatabaseManager.CoreSatimKontrol(hisseAdi, satisFiyati, coreMarj, trailingStop);
+            if (coreSatislar.Item1 > 0)
+            {
+                IdealManager.Sat(Sistem, hisse.HisseAdi, coreSatislar.Item1, satisFiyati);
+                foreach (var item in coreSatislar.Item2)
+                {
+                    item.SatisFiyati = satisFiyati;
+                    item.AktifMi = false;
+                    DatabaseManager.HisseHareketEkleGuncelle(item);
+                }
+                DatabaseManager.RiskDetayEkle(hisseAdi,
+                    string.Format("Core satis: {0} lot, fiyat: {1}", coreSatislar.Item1, satisFiyati));
+            }
+
+            // KATMAN 4: Trailing Stop Tepe Guncelleme
+            DatabaseManager.CoreTepeNoktasiGuncelle(hisseAdi, satisFiyati);
+        }
     }
 
     private static int DinamikCoreOranHesapla(dynamic Sistem, Hisse hisse, double satisFiyati)
@@ -343,7 +343,6 @@ public class KademeStratejiGelismis
     public static void ManuelEmirKontrolTumu(dynamic Sistem)
     {
         if (Sistem.BaglantiVar == false) return;
-        if (IdealManager.AlisSaatiKontrolEt(Sistem) != false) return;
 
         var emirler = DatabaseManager.ManuelEmirGetir(null);
         foreach (var emir in emirler)

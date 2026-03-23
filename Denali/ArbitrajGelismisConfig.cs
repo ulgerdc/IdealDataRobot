@@ -17,4 +17,5 @@ public class ArbitrajGelismisConfig
     public double TemettuTutar { get; set; }
     public System.DateTime TemettuTarihi { get; set; }
     public double Butce { get; set; }
+    public double StopajOrani { get; set; }
 }

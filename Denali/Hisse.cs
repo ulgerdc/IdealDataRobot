@@ -38,6 +38,7 @@ public class Hisse
     public double CoreMarj { get; set; }
     public double TrailingStopYuzde { get; set; }
     public double ButceLimitYuzde { get; set; }
+    public bool CoreSatisAktif { get; set; }
     public double ButceAtrGecisYuzde { get; set; }
 
     public int AtrPeriyot { get; set; }

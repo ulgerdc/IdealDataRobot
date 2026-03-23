@@ -1,10 +1,54 @@
 @page
 @model StockPortfolioReports.Pages.YutanMumRaporModel
 @{
-    ViewData["Title"] = "YutanMum Raporu";
+    ViewData["Title"] = "Overnight Rapor";
 }
 
-<h4>YutanMum Strateji Raporu</h4>
+<h4>Overnight Strateji Raporu</h4>
+
+<!-- Config -->
+@if (Model.Config != null)
+{
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Strateji Ayarlari</strong>
+            <span class="badge @(Model.Config.AktifMi ? "bg-success" : "bg-danger")">
+                @(Model.Config.AktifMi ? "AKTIF" : "PASIF")
+            </span>
+        </div>
+        <div class="card-body">
+            <form method="post" class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label">Toplam Butce</label>
+                    <input type="number" class="form-control" name="toplamButce" value="@Model.Config.ToplamButce" step="1000" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Max Aktif Batch</label>
+                    <input type="number" class="form-control" name="maxAktifBatch" value="@Model.Config.MaxAktifBatch" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Min Butce/Hisse</label>
+                    <input type="number" class="form-control" name="minButcePerHisse" value="@Model.Config.MinButcePerHisse" step="500" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Islem Saati</label>
+                    <input type="text" class="form-control" name="islemSaati" value="@Model.Config.IslemSaati" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Durum</label>
+                    <div class="form-check form-switch mt-2">
+                        <input class="form-check-input" type="checkbox" name="aktifMi" value="true"
+                               @(Model.Config.AktifMi ? "checked" : "") />
+                        <label class="form-check-label">Aktif</label>
+                    </div>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-warning">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
 
 <!-- Filtre -->
 <form method="get" class="row g-3 mb-4">
@@ -173,7 +217,7 @@
                     <th class="text-end">Alim Tutari</th>
                     <th class="text-center">K/Z</th>
                     <th class="text-end">Kar</th>
-                    <th class="text-end">Ort Momentum</th>
+                    <th class="text-end">Ort Yukselis%</th>
                 </tr>
             </thead>
             <tbody>

@@ -131,6 +131,12 @@
                     <input type="hidden" name="Hisse.SatisAktif" value="false" />
                     <label class="form-check-label" for="chkSatisAktif">Satis Aktif</label>
                 </div>
+                <div class="form-check form-switch mb-2">
+                    <input type="checkbox" name="Hisse.CoreSatisAktif" value="true" class="form-check-input"
+                           id="chkCoreSatisAktif" @((Model.Hisse.CoreSatisAktif ?? false) ? "checked" : "") />
+                    <input type="hidden" name="Hisse.CoreSatisAktif" value="false" />
+                    <label class="form-check-label" for="chkCoreSatisAktif">Core Satis Aktif</label>
+                </div>
             </fieldset>
 
             <div class="mb-2 text-muted">

@@ -38,6 +38,121 @@
         YutanMumStrateji.Baslat(Sistem);
     }
 
+    public void OvernightBaslat(dynamic Sistem)
+    {
+        OvernightStrateji.Baslat(Sistem);
+    }
+
+    public void OvernightTestBaslat(dynamic Sistem)
+    {
+        OvernightStrateji.Test(Sistem);
+    }
+
+    public void OvernightAnalizBaslat(dynamic Sistem)
+    {
+        OvernightAnaliz.Baslat(Sistem);
+    }
+
+    public void PortfoySenkronBaslat(dynamic Sistem)
+    {
+        PortfoySenkron.Baslat(Sistem);
+    }
+
+    public void GucluKapanisBacktestBaslat(dynamic Sistem)
+    {
+        GucluKapanisBacktest.Baslat(Sistem);
+    }
+
+    public void MomentumBacktestBaslat(dynamic Sistem)
+    {
+        MomentumBacktest.Baslat(Sistem);
+    }
+
+    public void YutanMumBacktestBaslat(dynamic Sistem)
+    {
+        YutanMumBacktest.Baslat(Sistem);
+    }
+
+    public void DiptenTepkiBacktestBaslat(dynamic Sistem)
+    {
+        DiptenTepkiBacktest.Baslat(Sistem);
+    }
+
+    public void T2LikiditBacktestBaslat(dynamic Sistem)
+    {
+        T2LikiditBacktest.Baslat(Sistem);
+    }
+
+    public void FakeBreakdownBacktestBaslat(dynamic Sistem)
+    {
+        FakeBreakdownBacktest.Baslat(Sistem);
+    }
+
+    public void DiptenTepkiGunIciBacktestBaslat(dynamic Sistem)
+    {
+        DiptenTepkiGunIciBacktest.Baslat(Sistem);
+    }
+
+    public void FakeBreakdownGunIciBacktestBaslat(dynamic Sistem)
+    {
+        FakeBreakdownGunIciBacktest.Baslat(Sistem);
+    }
+
+    public void DiptenTepkiTPSLBacktestBaslat(dynamic Sistem)
+    {
+        DiptenTepkiTPSLBacktest.Baslat(Sistem);
+    }
+
+    public void FakeBreakdownTPSLBacktestBaslat(dynamic Sistem)
+    {
+        FakeBreakdownTPSLBacktest.Baslat(Sistem);
+    }
+
+    public void GucluKapanisGapBacktestBaslat(dynamic Sistem)
+    {
+        GucluKapanisGapBacktest.Baslat(Sistem);
+    }
+
+    public void T2LikiditGapBacktestBaslat(dynamic Sistem)
+    {
+        T2LikiditGapBacktest.Baslat(Sistem);
+    }
+
+    public void GucluKapanisV2BacktestBaslat(dynamic Sistem)
+    {
+        GucluKapanisV2Backtest.Baslat(Sistem);
+    }
+
+    public void T2LikiditV2BacktestBaslat(dynamic Sistem)
+    {
+        T2LikiditV2Backtest.Baslat(Sistem);
+    }
+
+    public void HaftalikSimulasyonBaslat(dynamic Sistem)
+    {
+        HaftalikSimulasyon.Baslat(Sistem);
+    }
+
+    public void OvernightSemihBaslat(dynamic Sistem)
+    {
+        OvernightSemihStrateji.Baslat(Sistem);
+    }
+
+    public void OvernightSemihTestBaslat(dynamic Sistem)
+    {
+        OvernightSemihStrateji.Test(Sistem);
+    }
+
+    public void OvernightSemihBacktestBaslat(dynamic Sistem)
+    {
+        OvernightSemihBacktest.Baslat(Sistem);
+    }
+
+    public void SabahMomentumBacktestBaslat(dynamic Sistem)
+    {
+        SabahMomentumBacktest.Baslat(Sistem);
+    }
+
     static Portfoy p = null;
     public void Portfoy(dynamic Sistem)
     {

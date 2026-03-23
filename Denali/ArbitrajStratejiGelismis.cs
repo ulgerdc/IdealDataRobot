@@ -55,9 +55,10 @@ public class ArbitrajStratejiGelismis
         return System.Math.Max(0, gun);
     }
 
-    static double AdilSpreadHesapla(double yillikFaiz, int kalanGun, double temettuTutar, System.DateTime temettuTarihi, double spotFiyat)
+    static double AdilSpreadHesapla(double yillikFaiz, int kalanGun, double temettuTutar, System.DateTime temettuTarihi, double spotFiyat, double stopajOrani = 0)
     {
-        double adilSpread = yillikFaiz * (kalanGun / 365.0);
+        double netFaiz = stopajOrani > 0 ? yillikFaiz * (1.0 - stopajOrani / 100.0) : yillikFaiz;
+        double adilSpread = netFaiz * (kalanGun / 365.0);
 
         // Temettu duzeltmesi: ex-date henuz gecmediyse temettu yuzdesini cikart
         if (temettuTutar > 0 && temettuTarihi > System.DateTime.Now.Date && spotFiyat > 0)
@@ -94,7 +95,7 @@ public class ArbitrajStratejiGelismis
         double spreadYuzde = (spreadTutar / bistMid) * 100;
 
         int kalanGun = KalanGunHesapla(config.YakinVadeSonGun);
-        double adilSpread = AdilSpreadHesapla(config.YillikFaiz, kalanGun, config.TemettuTutar, config.TemettuTarihi, bistMid);
+        double adilSpread = AdilSpreadHesapla(config.YillikFaiz, kalanGun, config.TemettuTutar, config.TemettuTarihi, bistMid, config.StopajOrani);
         double netPrim = spreadYuzde - adilSpread;
 
         // Aktif pozisyon kontrol
@@ -206,6 +207,34 @@ public class ArbitrajStratejiGelismis
                 + " [" + kalanGun + "g]" + durum);
         }
 
+        // Backwardation Swap Firsati: VIOP < Spot ise ve portfoyde hisse varsa sinyal ver
+        if (spreadYuzde < -0.5 && aktifPozisyon == null)
+        {
+            try
+            {
+                int aktifLot = DatabaseManager.HisseAktifLotGetir(config.HisseAdi);
+                if (aktifLot > 0)
+                {
+                    double teminatOrani = 0.15;
+                    double netFaiz = config.StopajOrani > 0 ? config.YillikFaiz * (1.0 - config.StopajOrani / 100.0) : config.YillikFaiz;
+                    double spreadKazanc = -spreadYuzde;
+                    double serbestOran = 1.0 - teminatOrani;
+                    double faizKazanc = netFaiz * (kalanGun / 365.0) * serbestOran;
+                    double toplamFayda = spreadKazanc + faizKazanc;
+                    int viopKarsilik = aktifLot / 100; // VIOP 1 lot = Spot 100 lot
+                    int swapLot = viopKarsilik * 100; // swap edilebilir spot lot (100'un katlari)
+                    double faydaTL = swapLot * bistMid * toplamFayda / 100.0;
+
+                    if (toplamFayda >= 2.0 && viopKarsilik > 0)
+                    {
+                        sb.AppendLine(string.Format("SWAP: {0} Spot:{1:F2} VIOP:{2:F2} Bckw:{3:F2}% Faiz:{4:F2}% Fayda:{5:F2}% {6:N0}TL SpotLot:{7} ViopLot:{8} [{9}g]",
+                            config.HisseAdi, bistMid, viopMid, spreadKazanc, faizKazanc, toplamFayda, faydaTL, swapLot, viopKarsilik, kalanGun));
+                    }
+                }
+            }
+            catch { }
+        }
+
         if (SpreadDegistiMi(config.Id, spreadYuzde))
         {
             bool logGiris = aktifPozisyon == null && netPrim >= config.GirisMarji;
@@ -248,7 +277,7 @@ public class ArbitrajStratejiGelismis
         int kalanGunYakin = KalanGunHesapla(config.YakinVadeSonGun);
         int kalanGunUzak = KalanGunHesapla(config.UzakVadeSonGun);
         int vadeFarki = kalanGunUzak - kalanGunYakin;
-        double adilSpread = AdilSpreadHesapla(config.YillikFaiz, vadeFarki, config.TemettuTutar, config.TemettuTarihi, yakinMid);
+        double adilSpread = AdilSpreadHesapla(config.YillikFaiz, vadeFarki, config.TemettuTutar, config.TemettuTarihi, yakinMid, config.StopajOrani);
         double netPrim = System.Math.Abs(spreadYuzde) - adilSpread;
 
         // Aktif pozisyon kontrol

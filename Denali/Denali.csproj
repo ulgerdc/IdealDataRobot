@@ -75,7 +75,32 @@
     <Compile Include="YutanMumBatch.cs" />
     <Compile Include="YutanMumHareket.cs" />
     <Compile Include="YutanMumStrateji.cs" />
+    <Compile Include="GucluKapanisBacktest.cs" />
+    <Compile Include="MomentumBacktest.cs" />
+    <Compile Include="YutanMumBacktest.cs" />
+    <Compile Include="DiptenTepkiBacktest.cs" />
+    <Compile Include="T2LikiditBacktest.cs" />
+    <Compile Include="FakeBreakdownBacktest.cs" />
+    <Compile Include="DiptenTepkiGunIciBacktest.cs" />
+    <Compile Include="FakeBreakdownGunIciBacktest.cs" />
+    <Compile Include="DiptenTepkiTPSLBacktest.cs" />
+    <Compile Include="FakeBreakdownTPSLBacktest.cs" />
+    <Compile Include="GucluKapanisGapBacktest.cs" />
+    <Compile Include="T2LikiditGapBacktest.cs" />
+    <Compile Include="GucluKapanisV2Backtest.cs" />
+    <Compile Include="T2LikiditV2Backtest.cs" />
+    <Compile Include="HaftalikSimulasyon.cs" />
+    <Compile Include="OvernightStrateji.cs" />
+    <Compile Include="OvernightAnaliz.cs" />
+    <Compile Include="PortfoySenkron.cs" />
     <Compile Include="ManuelEmir.cs" />
+    <Compile Include="DiptenTepkiConfig.cs" />
+    <Compile Include="DiptenTepkiBatch.cs" />
+    <Compile Include="DiptenTepkiHareket.cs" />
+    <Compile Include="DiptenTepkiStrateji.cs" />
+    <Compile Include="OvernightSemihStrateji.cs" />
+    <Compile Include="OvernightSemihBacktest.cs" />
+    <Compile Include="SabahMomentumBacktest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

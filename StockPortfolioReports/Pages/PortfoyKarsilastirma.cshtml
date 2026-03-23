@@ -1,0 +1,186 @@
+@page
+@model StockPortfolioReports.Pages.PortfoyKarsilastirmaModel
+@{
+    ViewData["Title"] = "Portfoy Karsilastirma";
+}
+
+<h4>Portfoy Karsilastirma</h4>
+
+@if (Model.SonGuncelleme.HasValue)
+{
+    <small class="text-muted">IdealPro son guncelleme: @Model.SonGuncelleme.Value.ToString("dd.MM.yyyy HH:mm:ss")</small>
+}
+else
+{
+    <div class="alert alert-warning">
+        IdealPro portfoy verisi henuz yok. <code>PortfoySenkronBaslat</code> robotu IdealPro'da calistirilmali.
+    </div>
+}
+
+<!-- Hesap Bilgisi -->
+@if (Model.Hesap != null && Model.Hesap.Bakiye > 0)
+{
+    <div class="row mb-3 mt-3">
+        <div class="col-md-3">
+            <div class="card bg-dark text-white">
+                <div class="card-body py-2">
+                    <small>Bakiye</small>
+                    <h5>@Model.Hesap.Bakiye.ToString("N0") TL</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-dark text-white">
+                <div class="card-body py-2">
+                    <small>Islem Limit</small>
+                    <h5>@Model.Hesap.IslemLimit.ToString("N0") TL</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Ozet Kartlari -->
+<div class="row mb-4 mt-3">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body py-2">
+                <small>DB Portfoy</small>
+                <h5>@Model.DbToplamMaliyet.ToString("N0") TL maliyet</h5>
+                @if (Model.DbToplamDeger > 0)
+                {
+                    var kz = Model.DbToplamDeger - Model.DbToplamMaliyet;
+                    <small>Deger: @Model.DbToplamDeger.ToString("N0") TL | K/Z: <strong class="@(kz >= 0 ? "" : "text-warning")">@kz.ToString("N0")</strong></small>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body py-2">
+                <small>IdealPro Portfoy</small>
+                <h5>@Model.IdealToplamMaliyet.ToString("N0") TL maliyet</h5>
+                <small>Deger: @Model.IdealToplamDeger.ToString("N0") TL</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card @(Model.FarkliSayisi + Model.SadeceDbSayisi + Model.SadeceIdealSayisi > 0 ? "bg-danger" : "bg-success") text-white">
+            <div class="card-body py-2">
+                <small>Eslesen / Farkli</small>
+                <h5>@Model.EslesenSayisi eslesen</h5>
+                <small>@Model.FarkliSayisi farkli lot | @Model.SadeceDbSayisi sadece DB | @Model.SadeceIdealSayisi sadece Ideal</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-secondary text-white">
+            <div class="card-body py-2">
+                <small>Toplam Hisse</small>
+                <h5>@Model.Satirlar.Count adet</h5>
+                <small>@Model.Satirlar.Sum(s => s.DbLot) DB lot | @Model.Satirlar.Sum(s => s.IdealLot) Ideal lot</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Karsilastirma Tablosu -->
+<div class="card mb-4">
+    <div class="card-header">
+        <strong>Pozisyon Karsilastirma</strong>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-sm table-striped table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Hisse</th>
+                    <th colspan="4" class="text-center bg-primary">Veritabani</th>
+                    <th colspan="4" class="text-center bg-info">IdealPro</th>
+                    <th class="text-center">Fark</th>
+                </tr>
+                <tr class="table-secondary">
+                    <th></th>
+                    <th class="text-end">Lot</th>
+                    <th class="text-end">Ort Maliyet</th>
+                    <th class="text-end">Maliyet TL</th>
+                    <th class="text-end">K/Z</th>
+                    <th class="text-end">Lot</th>
+                    <th class="text-end">Maliyet</th>
+                    <th class="text-end">Deger TL</th>
+                    <th class="text-end">K/Z</th>
+                    <th class="text-center">Lot</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in Model.Satirlar)
+                {
+                    string rowClass = "";
+                    if (s.SadeceDb) rowClass = "table-warning";
+                    else if (s.SadeceIdeal) rowClass = "table-danger";
+                    else if (!s.Eslesiyor) rowClass = "table-danger";
+
+                    <tr class="@rowClass">
+                        <td>
+                            <strong>@s.HisseAdi</strong>
+                            @if (s.SadeceDb) { <span class="badge bg-warning text-dark ms-1">Sadece DB</span> }
+                            @if (s.SadeceIdeal) { <span class="badge bg-danger ms-1">Sadece Ideal</span> }
+                            @if (s.DbPozSayisi > 1) { <small class="text-muted">(@s.DbPozSayisi poz)</small> }
+                        </td>
+                        <!-- DB -->
+                        <td class="text-end">@(s.DbLot > 0 ? s.DbLot.ToString() : "-")</td>
+                        <td class="text-end">@(s.DbOrtMaliyet > 0 ? s.DbOrtMaliyet.ToString("N2") : "-")</td>
+                        <td class="text-end">@(s.DbMaliyetTutar > 0 ? s.DbMaliyetTutar.ToString("N0") : "-")</td>
+                        <td class="text-end @(s.DbKarZarar >= 0 ? "text-success" : "text-danger")">
+                            @(s.DbGuncelDeger > 0 ? s.DbKarZarar.ToString("N0") : "-")
+                        </td>
+                        <!-- IdealPro -->
+                        <td class="text-end">@(s.IdealLot > 0 ? s.IdealLot.ToString() : "-")</td>
+                        <td class="text-end">@(s.IdealMaliyet > 0 ? s.IdealMaliyet.ToString("N2") : "-")</td>
+                        <td class="text-end">@(s.IdealGuncelDeger > 0 ? s.IdealGuncelDeger.ToString("N0") : "-")</td>
+                        <td class="text-end @(s.IdealKarZarar >= 0 ? "text-success" : "text-danger")">
+                            @(s.IdealLot > 0 ? s.IdealKarZarar.ToString("N0") : "-")
+                        </td>
+                        <!-- Fark -->
+                        <td class="text-center">
+                            @if (s.Eslesiyor)
+                            {
+                                <span class="text-success">OK</span>
+                            }
+                            else if (s.SadeceDb || s.SadeceIdeal)
+                            {
+                                <span class="text-danger">!</span>
+                            }
+                            else
+                            {
+                                <span class="text-danger fw-bold">@(s.LotFark > 0 ? "+" : "")@s.LotFark</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            @if (Model.Satirlar.Any())
+            {
+                <tfoot class="table-dark">
+                    <tr>
+                        <td><strong>TOPLAM</strong></td>
+                        <td class="text-end">@Model.Satirlar.Sum(s => s.DbLot)</td>
+                        <td></td>
+                        <td class="text-end">@Model.DbToplamMaliyet.ToString("N0")</td>
+                        <td class="text-end @(Model.DbToplamDeger - Model.DbToplamMaliyet >= 0 ? "text-success" : "text-danger")">
+                            @((Model.DbToplamDeger - Model.DbToplamMaliyet).ToString("N0"))
+                        </td>
+                        <td class="text-end">@Model.Satirlar.Sum(s => s.IdealLot)</td>
+                        <td></td>
+                        <td class="text-end">@Model.IdealToplamDeger.ToString("N0")</td>
+                        <td class="text-end">@Model.Satirlar.Sum(s => s.IdealKarZarar).ToString("N0")</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            }
+        </table>
+        @if (!Model.Satirlar.Any())
+        {
+            <div class="text-center text-muted py-4">Henuz portfoy verisi yok.</div>
+        }
+    </div>
+</div>

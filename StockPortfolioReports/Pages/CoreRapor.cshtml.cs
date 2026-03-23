@@ -21,9 +21,9 @@ namespace StockPortfolioReports.Pages
         public int ToplamAdet { get; set; }
         public int ToplamLot { get; set; }
         public decimal ToplamBrutMaliyet { get; set; }
-        public decimal ToplamGerceklesenKar { get; set; }
-        public decimal ToplamNetMaliyet { get; set; }
         public decimal ToplamGuncelDeger { get; set; }
+        public decimal ToplamAcikKZ { get; set; }
+        public decimal ToplamGerceklesenKar { get; set; }
         public decimal ToplamKZ { get; set; }
 
         // Tablo
@@ -77,8 +77,8 @@ namespace StockPortfolioReports.Pages
                 var brutMaliyet = aktifler.Sum(h => h.AlisFiyati * h.Lot);
                 var aktifGuncelDeger = aktifler.Sum(h => guncelFiyat * h.Lot);
                 var gerceklesenKar = kapananlar.Sum(h => h.Kar ?? 0);
-                var netMaliyet = brutMaliyet - gerceklesenKar;
-                var aktifKZ = aktifGuncelDeger - netMaliyet;
+                var acikKZ = aktifGuncelDeger - brutMaliyet;
+                var toplamKZ = acikKZ + gerceklesenKar;
 
                 return new CoreHisseDto
                 {
@@ -89,39 +89,37 @@ namespace StockPortfolioReports.Pages
                         ? Math.Round(brutMaliyet / aktifler.Sum(h => h.Lot), 2) : 0,
                     GuncelFiyat = guncelFiyat,
                     BrutMaliyet = brutMaliyet,
-                    GerceklesenKar = gerceklesenKar,
-                    NetMaliyet = netMaliyet,
                     GuncelDeger = aktifGuncelDeger,
-                    AktifKZ = aktifKZ,
-                    AktifKZYuzde = netMaliyet > 0
-                        ? Math.Round((double)(aktifKZ / netMaliyet * 100), 2) : 0,
+                    AcikKZ = acikKZ,
+                    GerceklesenKar = gerceklesenKar,
+                    ToplamKZ = toplamKZ,
                     KapananAdet = kapananlar.Count,
                     OrtTutmaGun = aktifler.Count > 0
                         ? Math.Round(aktifler.Average(h => (DateTime.Now - h.AlisTarihi).TotalDays), 1) : 0
                 };
             })
-            .OrderByDescending(x => x.AktifKZ)
+            .OrderByDescending(x => x.ToplamKZ)
             .ToList();
 
             // Ozet kartlar
             ToplamAdet = HisseDetaylari.Sum(h => h.AktifAdet);
             ToplamLot = HisseDetaylari.Sum(h => h.AktifLot);
             ToplamBrutMaliyet = HisseDetaylari.Sum(h => h.BrutMaliyet);
-            ToplamGerceklesenKar = HisseDetaylari.Sum(h => h.GerceklesenKar);
-            ToplamNetMaliyet = ToplamBrutMaliyet - ToplamGerceklesenKar;
             ToplamGuncelDeger = HisseDetaylari.Sum(h => h.GuncelDeger);
-            ToplamKZ = ToplamGuncelDeger - ToplamNetMaliyet;
+            ToplamAcikKZ = ToplamGuncelDeger - ToplamBrutMaliyet;
+            ToplamGerceklesenKar = HisseDetaylari.Sum(h => h.GerceklesenKar);
+            ToplamKZ = ToplamAcikKZ + ToplamGerceklesenKar;
 
             // Grafik JSON
             var grafikData = HisseDetaylari
-                .Where(h => h.AktifLot > 0)
-                .OrderByDescending(h => h.AktifKZ)
+                .Where(h => h.AktifLot > 0 || h.GerceklesenKar != 0)
+                .OrderByDescending(h => h.ToplamKZ)
                 .ToList();
 
             CoreKZJson = JsonSerializer.Serialize(new
             {
                 labels = grafikData.Select(x => x.HisseAdi).ToArray(),
-                kzData = grafikData.Select(x => Math.Round(x.AktifKZ, 2)).ToArray(),
+                acikKZData = grafikData.Select(x => Math.Round(x.AcikKZ, 2)).ToArray(),
                 gerceklesenData = grafikData.Select(x => Math.Round(x.GerceklesenKar, 2)).ToArray()
             });
         }
@@ -134,11 +132,10 @@ namespace StockPortfolioReports.Pages
             public decimal OrtMaliyet { get; set; }
             public decimal GuncelFiyat { get; set; }
             public decimal BrutMaliyet { get; set; }
-            public decimal GerceklesenKar { get; set; }
-            public decimal NetMaliyet { get; set; }
             public decimal GuncelDeger { get; set; }
-            public decimal AktifKZ { get; set; }
-            public double AktifKZYuzde { get; set; }
+            public decimal AcikKZ { get; set; }
+            public decimal GerceklesenKar { get; set; }
+            public decimal ToplamKZ { get; set; }
             public int KapananAdet { get; set; }
             public double OrtTutmaGun { get; set; }
         }

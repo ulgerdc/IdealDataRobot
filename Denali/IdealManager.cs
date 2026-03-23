@@ -596,6 +596,234 @@ public class IdealManager
         return (Sistem.Saat.CompareTo(saat) < 0 || Sistem.Saat.CompareTo(saatBitis) > 0);
     }
 
+    public static bool DiptenTepkiKontrol(dynamic Sistem, string hisse,
+        double minDususYuzde, double minTepkiYuzde, double minCloseRangeYuzde,
+        int hacimPer, double hacimCarpan,
+        out double bugunAcilis, out double bugunYuksek, out double bugunDusuk,
+        out double bugunKapanis, out long bugunHacim,
+        out double dunkuKapanis, out double hacimSMA,
+        out double gunlukYuzde, out double dipTepkiYuzde, out double closeRangeYuzde)
+    {
+        bugunAcilis = 0; bugunYuksek = 0; bugunDusuk = 0; bugunKapanis = 0;
+        bugunHacim = 0; dunkuKapanis = 0; hacimSMA = 0;
+        gunlukYuzde = 0; dipTepkiYuzde = 0; closeRangeYuzde = 0;
+
+        string sembol = hisseOrtam + hisse;
+
+        // Kapanis verisi (bugun + dunku)
+        var kapanislar = Sistem.GrafikFiyatOku(sembol, "G", "Kapanis");
+        if (kapanislar == null || kapanislar.Count < 2)
+            return false;
+
+        int sonBar = kapanislar.Count - 1;
+        bugunKapanis = kapanislar[sonBar];
+        dunkuKapanis = kapanislar[sonBar - 1];
+
+        if (bugunKapanis <= 0 || dunkuKapanis <= 0)
+            return false;
+
+        // Acilis verisi
+        try
+        {
+            var acilislar = Sistem.GrafikFiyatOku(sembol, "G", "Acilis");
+            if (acilislar != null && acilislar.Count >= 1)
+                bugunAcilis = acilislar[acilislar.Count - 1];
+        }
+        catch { return false; }
+
+        // Yuksek verisi
+        try
+        {
+            var yuksekler = Sistem.GrafikFiyatOku(sembol, "G", "Yuksek");
+            if (yuksekler != null && yuksekler.Count >= 1)
+                bugunYuksek = yuksekler[yuksekler.Count - 1];
+        }
+        catch { return false; }
+
+        // Dusuk verisi
+        try
+        {
+            var dusukler = Sistem.GrafikFiyatOku(sembol, "G", "Dusuk");
+            if (dusukler != null && dusukler.Count >= 1)
+                bugunDusuk = dusukler[dusukler.Count - 1];
+        }
+        catch { return false; }
+
+        if (bugunYuksek <= 0 || bugunDusuk <= 0)
+            return false;
+
+        // 1. Gunluk dusus: (C - C[1]) / C[1] * 100 <= -minDususYuzde
+        gunlukYuzde = (bugunKapanis - dunkuKapanis) / dunkuKapanis * 100;
+        if (gunlukYuzde > -minDususYuzde)
+            return false;
+
+        // 2. Dipten tepki: (C - L) / L * 100 >= minTepkiYuzde
+        if (bugunDusuk <= 0)
+            return false;
+        dipTepkiYuzde = (bugunKapanis - bugunDusuk) / bugunDusuk * 100;
+        if (dipTepkiYuzde < minTepkiYuzde)
+            return false;
+
+        // 3. Close range: (C - L) / (H - L) * 100 >= minCloseRangeYuzde
+        double range = bugunYuksek - bugunDusuk;
+        if (range <= 0)
+            return false;
+        closeRangeYuzde = (bugunKapanis - bugunDusuk) / range * 100;
+        if (closeRangeYuzde < minCloseRangeYuzde)
+            return false;
+
+        // 4. Hacim kontrolu: V > SMA(V, hacimPer) * hacimCarpan
+        try
+        {
+            var hacimler = Sistem.GrafikFiyatOku(sembol, "G", "Hacim");
+            if (hacimler != null && hacimler.Count >= 2)
+            {
+                bugunHacim = (long)hacimler[hacimler.Count - 1];
+
+                // Hacim SMA hesapla
+                int baslangic = System.Math.Max(0, hacimler.Count - 1 - hacimPer);
+                int sayac = 0;
+                double toplam = 0;
+                for (int i = baslangic; i < hacimler.Count - 1; i++)
+                {
+                    toplam += (double)hacimler[i];
+                    sayac++;
+                }
+                if (sayac > 0)
+                    hacimSMA = toplam / sayac;
+
+                if (hacimSMA > 0 && bugunHacim < (long)(hacimSMA * hacimCarpan))
+                    return false;
+            }
+        }
+        catch
+        {
+            // Hacim verisi yoksa — hacim kontrolu devre disi
+        }
+
+        return true;
+    }
+
+    public static bool GucluKapanisSinyalKontrol(dynamic Sistem, string hisse,
+        double minYukselis, double minCloseRange, int hacimPer, double hacimCarpan, bool hacimArtisi,
+        double minGunlukHacimTL,
+        out double yukselis, out double closeRangeOut, out double hacimTL)
+    {
+        yukselis = 0; closeRangeOut = 0; hacimTL = 0;
+
+        string sembol = hisseOrtam + hisse;
+
+        var kapanislar = Sistem.GrafikFiyatOku(sembol, "G", "Kapanis");
+        if (kapanislar == null || kapanislar.Count < hacimPer + 2) return false;
+        int son = kapanislar.Count - 1;
+        double bugunKapanis = kapanislar[son];
+        double dunkuKapanis = kapanislar[son - 1];
+        if (bugunKapanis <= 0 || dunkuKapanis <= 0) return false;
+
+        yukselis = (bugunKapanis - dunkuKapanis) / dunkuKapanis * 100;
+        if (yukselis < minYukselis) return false;
+
+        var acilislar = Sistem.GrafikFiyatOku(sembol, "G", "Acilis");
+        if (acilislar == null || acilislar.Count <= son) return false;
+        double bugunAcilis = acilislar[son];
+        if (bugunKapanis <= bugunAcilis) return false; // yesil mum
+
+        var yuksekler = Sistem.GrafikFiyatOku(sembol, "G", "Yuksek");
+        var dusukler = Sistem.GrafikFiyatOku(sembol, "G", "Dusuk");
+        if (yuksekler == null || dusukler == null) return false;
+        double bugunYuksek = yuksekler[son];
+        double bugunDusuk = dusukler[son];
+        if (bugunYuksek <= bugunDusuk) return false;
+
+        closeRangeOut = (bugunKapanis - bugunDusuk) / (bugunYuksek - bugunDusuk) * 100;
+        if (closeRangeOut < minCloseRange) return false;
+
+        // Hacim SMA kontrolu
+        try
+        {
+            var hacimler = Sistem.GrafikFiyatOku(sembol, "G", "Hacim");
+            if (hacimler != null && hacimler.Count > son)
+            {
+                double bugunHacim = (double)hacimler[son];
+                hacimTL = bugunKapanis * bugunHacim;
+                if (hacimTL < minGunlukHacimTL) return false;
+
+                double sma = 0;
+                int basla = son - hacimPer;
+                if (basla < 0) basla = 0;
+                for (int i = basla; i < son; i++) sma += (double)hacimler[i];
+                sma /= (son - basla);
+                if (sma > 0 && bugunHacim < sma * hacimCarpan) return false;
+
+                if (hacimArtisi && son >= 1)
+                {
+                    double dunkuHacim = (double)hacimler[son - 1];
+                    if (dunkuHacim > 0 && bugunHacim <= dunkuHacim) return false;
+                }
+            }
+        }
+        catch { }
+
+        return true;
+    }
+
+    public static bool T2LikiditeSinyalKontrol(dynamic Sistem, string hisse,
+        double minYukselis, double maxYukselis, double minCloseRange, int hacimPer, double hacimCarpan,
+        double minGunlukHacimTL,
+        out double yukselis, out double closeRangeOut, out double hacimTL)
+    {
+        yukselis = 0; closeRangeOut = 0; hacimTL = 0;
+
+        string sembol = hisseOrtam + hisse;
+
+        var kapanislar = Sistem.GrafikFiyatOku(sembol, "G", "Kapanis");
+        if (kapanislar == null || kapanislar.Count < hacimPer + 2) return false;
+        int son = kapanislar.Count - 1;
+        double bugunKapanis = kapanislar[son];
+        double dunkuKapanis = kapanislar[son - 1];
+        if (bugunKapanis <= 0 || dunkuKapanis <= 0) return false;
+
+        yukselis = (bugunKapanis - dunkuKapanis) / dunkuKapanis * 100;
+        if (yukselis < minYukselis || yukselis > maxYukselis) return false;
+
+        var acilislar = Sistem.GrafikFiyatOku(sembol, "G", "Acilis");
+        if (acilislar == null || acilislar.Count <= son) return false;
+        double bugunAcilis = acilislar[son];
+        if (bugunKapanis <= bugunAcilis) return false;
+
+        var yuksekler = Sistem.GrafikFiyatOku(sembol, "G", "Yuksek");
+        var dusukler = Sistem.GrafikFiyatOku(sembol, "G", "Dusuk");
+        if (yuksekler == null || dusukler == null) return false;
+        double bugunYuksek = yuksekler[son];
+        double bugunDusuk = dusukler[son];
+        double range = bugunYuksek - bugunDusuk;
+        if (range <= 0) return false;
+
+        closeRangeOut = (bugunKapanis - bugunDusuk) / range * 100;
+        if (closeRangeOut < minCloseRange) return false;
+
+        try
+        {
+            var hacimler = Sistem.GrafikFiyatOku(sembol, "G", "Hacim");
+            if (hacimler != null && hacimler.Count > son)
+            {
+                double bugunHacim = (double)hacimler[son];
+                hacimTL = bugunKapanis * bugunHacim;
+                if (hacimTL < minGunlukHacimTL) return false;
+
+                double sma = 0;
+                int basla = son - hacimPer;
+                if (basla < 0) basla = 0;
+                for (int i = basla; i < son; i++) sma += (double)hacimler[i];
+                sma /= (son - basla);
+                if (sma > 0 && bugunHacim < sma * hacimCarpan) return false;
+            }
+        }
+        catch { }
+
+        return true;
+    }
+
     public static double EndeksEMAKontrol(dynamic Sistem)
     {
         if (Sistem == null) return 1.0;

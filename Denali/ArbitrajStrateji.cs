@@ -67,7 +67,10 @@ public class ArbitrajStrateji
             var yuzde = IdealManager.YuzdeFarkiHesapla(viopSatisFiyati, bistAlisFiyati);
 
             //sb.AppendLine(hisse.HisseAdi + "#" + yuzde.ToString() + "#" + bistSatisFiyati.ToString() + "#" + viopAlisFiyati.ToString());
-            list.Add(new HisseAdiYuzde { HisseAdi = hisse.HisseAdi, Yuzde = yuzde });
+            var item = new HisseAdiYuzde();
+            item.HisseAdi = hisse.HisseAdi;
+            item.Yuzde = yuzde;
+            list.Add(item);
 
             if (yuzde >= hisse.Marj)
             {

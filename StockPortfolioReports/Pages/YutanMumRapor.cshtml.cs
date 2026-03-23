@@ -32,6 +32,9 @@ namespace StockPortfolioReports.Pages
         public int KazancliIslem { get; set; }
         public int KayipliIslem { get; set; }
 
+        // Config
+        public YutanMumConfig? Config { get; set; }
+
         // Tablolar
         public List<BatchDto> Batchler { get; set; } = new();
         public List<HisseOzetDto> HisseOzetleri { get; set; } = new();
@@ -43,6 +46,7 @@ namespace StockPortfolioReports.Pages
 
         public async Task OnGetAsync()
         {
+            Config = await _context.YutanMumConfig.FirstOrDefaultAsync();
             BaslangicTarih ??= DateTime.Today.AddDays(-30);
             BitisTarih ??= DateTime.Today;
             var baslangic = BaslangicTarih.Value.Date;
@@ -148,6 +152,22 @@ namespace StockPortfolioReports.Pages
                 labels = grafikHisseler.Select(x => x.HisseAdi).ToArray(),
                 karData = grafikHisseler.Select(x => Math.Round(x.ToplamKar, 2)).ToArray()
             });
+        }
+
+        public async Task<IActionResult> OnPostAsync(double toplamButce, int maxAktifBatch,
+            double minButcePerHisse, string islemSaati, bool aktifMi)
+        {
+            var config = await _context.YutanMumConfig.FirstOrDefaultAsync();
+            if (config != null)
+            {
+                config.ToplamButce = toplamButce;
+                config.MaxAktifBatch = maxAktifBatch;
+                config.MinButcePerHisse = minButcePerHisse;
+                config.IslemSaati = islemSaati;
+                config.AktifMi = aktifMi;
+                await _context.SaveChangesAsync();
+            }
+            return RedirectToPage();
         }
 
         public class BatchDto

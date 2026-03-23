@@ -107,7 +107,12 @@ public class DatabaseManager
         return hissePozisyonlari;
     }
 
-    public static System.Tuple<int, System.Collections.Generic.List<HisseHareket>> HisseSatimKontrol(string hisseAdi, double satisFiyati, double marj, int pozisyonTipi = 0)
+    public static System.Tuple<int, System.Collections.Generic.List<HisseHareket>> HisseSatimKontrol(string hisseAdi, double satisFiyati, double marj)
+    {
+        return HisseSatimKontrol(hisseAdi, satisFiyati, marj, 0);
+    }
+
+    public static System.Tuple<int, System.Collections.Generic.List<HisseHareket>> HisseSatimKontrol(string hisseAdi, double satisFiyati, double marj, int pozisyonTipi)
     {
         HisseHareket hisse = null;
         int satilacakLot = 0;
@@ -318,8 +323,43 @@ public class DatabaseManager
 
     }
 
+    static System.Collections.Generic.Dictionary<string, System.DateTime> _riskDetayThrottle = new System.Collections.Generic.Dictionary<string, System.DateTime>();
+    static int _riskDetayThrottleDakika = 5;
+
     public static void RiskDetayEkle(string hisseAdi, string data)
     {
+        // Dongusal mesajlari throttle et (ayni hisse+mesaj icin 5 dakikada 1 kez)
+        string key = hisseAdi + "|" + data;
+        System.DateTime simdi = System.DateTime.Now;
+
+        if (_riskDetayThrottle.ContainsKey(key))
+        {
+            System.DateTime sonYazim = _riskDetayThrottle[key];
+            if ((simdi - sonYazim).TotalMinutes < _riskDetayThrottleDakika)
+            {
+                return;
+            }
+        }
+
+        _riskDetayThrottle[key] = simdi;
+
+        // Eski kayitlari temizle (bellek birikmesini onle)
+        if (_riskDetayThrottle.Count > 500)
+        {
+            var silinecekler = new System.Collections.Generic.List<string>();
+            foreach (var kv in _riskDetayThrottle)
+            {
+                if ((simdi - kv.Value).TotalMinutes > _riskDetayThrottleDakika)
+                {
+                    silinecekler.Add(kv.Key);
+                }
+            }
+            for (int i = 0; i < silinecekler.Count; i++)
+            {
+                _riskDetayThrottle.Remove(silinecekler[i]);
+            }
+        }
+
         var conn = OpenConnection();
 
         System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
@@ -474,6 +514,19 @@ public class DatabaseManager
         }
 
         return new System.Tuple<int, System.Collections.Generic.List<HisseHareket>>(satilacakLot, hisseHareketleri);
+    }
+
+    public static int HisseAktifLotGetir(string hisseAdi)
+    {
+        var conn = OpenConnection();
+        System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
+        cmd.CommandType = System.Data.CommandType.Text;
+        cmd.Connection = conn;
+        cmd.CommandText = "SELECT ISNULL(SUM(Lot), 0) FROM HisseHareket WHERE HisseAdi=@HisseAdi AND AktifMi=1";
+        cmd.Parameters.AddWithValue("@HisseAdi", hisseAdi);
+        int lot = (int)cmd.ExecuteScalar();
+        cmd.Connection.Close();
+        return lot;
     }
 
     public static void CoreTepeNoktasiGuncelle(string hisseAdi, double guncelFiyat)
@@ -791,7 +844,12 @@ public class DatabaseManager
     // Manuel Emir Metodlari
     // =============================================
 
-    public static System.Collections.Generic.List<ManuelEmir> ManuelEmirGetir(string hisseAdi = null)
+    public static System.Collections.Generic.List<ManuelEmir> ManuelEmirGetir()
+    {
+        return ManuelEmirGetir(null);
+    }
+
+    public static System.Collections.Generic.List<ManuelEmir> ManuelEmirGetir(string hisseAdi)
     {
         var list = new System.Collections.Generic.List<ManuelEmir>();
 
@@ -819,7 +877,12 @@ public class DatabaseManager
         return list;
     }
 
-    public static void ManuelEmirGuncelle(long id, int durum, double? gercekFiyat = null)
+    public static void ManuelEmirGuncelle(long id, int durum)
+    {
+        ManuelEmirGuncelle(id, durum, double.MinValue);
+    }
+
+    public static void ManuelEmirGuncelle(long id, int durum, double gercekFiyat)
     {
         var conn = OpenConnection();
 
@@ -829,7 +892,7 @@ public class DatabaseManager
         cmd.CommandText = "[dbo].[upd_manuelEmir]";
         cmd.Parameters.AddWithValue("@Id", id);
         cmd.Parameters.AddWithValue("@Durum", durum);
-        cmd.Parameters.AddWithValue("@GercekFiyat", gercekFiyat.HasValue ? (object)gercekFiyat.Value : System.DBNull.Value);
+        cmd.Parameters.AddWithValue("@GercekFiyat", gercekFiyat > double.MinValue ? (object)gercekFiyat : System.DBNull.Value);
         cmd.ExecuteNonQuery();
         cmd.Connection.Close();
     }
@@ -873,6 +936,30 @@ public class DatabaseManager
             System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
             cmd.CommandType = System.Data.CommandType.StoredProcedure;
             cmd.CommandText = "[dbo].[sel_bist100Hisseler]";
+
+            using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    list.Add(reader["HisseAdi"].ToString());
+                }
+            }
+        }
+
+        return list;
+    }
+
+    public static System.Collections.Generic.List<string> BistTumHisselerGetir()
+    {
+        var list = new System.Collections.Generic.List<string>();
+
+        using (System.Data.SqlClient.SqlConnection connection = new System.Data.SqlClient.SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+            cmd.CommandText = "[dbo].[sel_bistTumHisseler]";
 
             using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
             {
@@ -1042,6 +1129,213 @@ public class DatabaseManager
         return var;
     }
 
+    // === DIPTEN TEPKI ===
+
+    public static DiptenTepkiConfig DiptenTepkiConfigGetir()
+    {
+        DiptenTepkiConfig config = null;
+
+        using (System.Data.SqlClient.SqlConnection connection = new System.Data.SqlClient.SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+            cmd.CommandText = "[dbo].[sel_diptenTepkiConfig]";
+
+            using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
+            {
+                if (reader.Read())
+                {
+                    config = MapFromDataReader<DiptenTepkiConfig>(reader);
+                }
+            }
+        }
+
+        return config;
+    }
+
+    public static System.Collections.Generic.List<string> Bist50HisselerGetir()
+    {
+        var list = new System.Collections.Generic.List<string>();
+
+        using (System.Data.SqlClient.SqlConnection connection = new System.Data.SqlClient.SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+            cmd.CommandText = "[dbo].[sel_bist50Hisseler]";
+
+            using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    list.Add(reader["HisseAdi"].ToString());
+                }
+            }
+        }
+
+        return list;
+    }
+
+    public static long DiptenTepkiBatchOlustur(string robotAdi, int hisseSayisi, double toplamAlimTutari)
+    {
+        long batchId = 0;
+
+        using (System.Data.SqlClient.SqlConnection connection = new System.Data.SqlClient.SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+            cmd.CommandText = "[dbo].[ins_diptenTepkiBatch]";
+            cmd.Parameters.AddWithValue("@RobotAdi", robotAdi);
+            cmd.Parameters.AddWithValue("@HisseSayisi", hisseSayisi);
+            cmd.Parameters.AddWithValue("@ToplamAlimTutari", toplamAlimTutari);
+
+            object result = cmd.ExecuteScalar();
+            if (result != null && result != System.DBNull.Value)
+            {
+                batchId = System.Convert.ToInt64(result);
+            }
+        }
+
+        return batchId;
+    }
+
+    public static void DiptenTepkiHareketEkle(DiptenTepkiHareket hareket)
+    {
+        var conn = OpenConnection();
+
+        System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
+        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+        cmd.Connection = conn;
+        cmd.CommandText = "[dbo].[ins_diptenTepkiHareket]";
+
+        cmd.Parameters.AddWithValue("@BatchId", hareket.BatchId);
+        cmd.Parameters.AddWithValue("@HisseAdi", hareket.HisseAdi);
+        cmd.Parameters.AddWithValue("@Lot", hareket.Lot);
+        cmd.Parameters.AddWithValue("@AlisFiyati", System.Math.Round(hareket.AlisFiyati, 2));
+        cmd.Parameters.AddWithValue("@GunlukYuzde", hareket.GunlukYuzde != 0 ? (object)hareket.GunlukYuzde : System.DBNull.Value);
+        cmd.Parameters.AddWithValue("@DipTepkiYuzde", hareket.DipTepkiYuzde != 0 ? (object)hareket.DipTepkiYuzde : System.DBNull.Value);
+        cmd.Parameters.AddWithValue("@CloseRangeYuzde", hareket.CloseRangeYuzde != 0 ? (object)hareket.CloseRangeYuzde : System.DBNull.Value);
+        cmd.Parameters.AddWithValue("@BugunAcilis", hareket.BugunAcilis > 0 ? (object)hareket.BugunAcilis : System.DBNull.Value);
+        cmd.Parameters.AddWithValue("@BugunKapanis", hareket.BugunKapanis > 0 ? (object)hareket.BugunKapanis : System.DBNull.Value);
+        cmd.Parameters.AddWithValue("@BugunYuksek", hareket.BugunYuksek > 0 ? (object)hareket.BugunYuksek : System.DBNull.Value);
+        cmd.Parameters.AddWithValue("@BugunDusuk", hareket.BugunDusuk > 0 ? (object)hareket.BugunDusuk : System.DBNull.Value);
+        cmd.Parameters.AddWithValue("@DunkuKapanis", hareket.DunkuKapanis > 0 ? (object)hareket.DunkuKapanis : System.DBNull.Value);
+        cmd.Parameters.AddWithValue("@BugunHacim", hareket.BugunHacim > 0 ? (object)hareket.BugunHacim : System.DBNull.Value);
+        cmd.Parameters.AddWithValue("@HacimSMA", hareket.HacimSMA > 0 ? (object)hareket.HacimSMA : System.DBNull.Value);
+
+        cmd.ExecuteNonQuery();
+        cmd.Connection.Close();
+    }
+
+    public static System.Collections.Generic.List<DiptenTepkiBatch> DiptenTepkiAktifBatchlerGetir()
+    {
+        var list = new System.Collections.Generic.List<DiptenTepkiBatch>();
+
+        using (System.Data.SqlClient.SqlConnection connection = new System.Data.SqlClient.SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+            cmd.CommandText = "[dbo].[sel_diptenTepkiAktifBatchler]";
+
+            using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    DiptenTepkiBatch batch = MapFromDataReader<DiptenTepkiBatch>(reader);
+                    list.Add(batch);
+                }
+            }
+        }
+
+        return list;
+    }
+
+    public static System.Collections.Generic.List<DiptenTepkiHareket> DiptenTepkiBatchHareketlerGetir(long batchId)
+    {
+        var list = new System.Collections.Generic.List<DiptenTepkiHareket>();
+
+        using (System.Data.SqlClient.SqlConnection connection = new System.Data.SqlClient.SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+            cmd.CommandText = "[dbo].[sel_diptenTepkiBatchHareketler]";
+            cmd.Parameters.AddWithValue("@BatchId", batchId);
+
+            using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    DiptenTepkiHareket hareket = MapFromDataReader<DiptenTepkiHareket>(reader);
+                    list.Add(hareket);
+                }
+            }
+        }
+
+        return list;
+    }
+
+    public static void DiptenTepkiHareketSat(long id, double satisFiyati)
+    {
+        var conn = OpenConnection();
+
+        System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
+        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+        cmd.Connection = conn;
+        cmd.CommandText = "[dbo].[upd_diptenTepkiHareketSat]";
+        cmd.Parameters.AddWithValue("@Id", id);
+        cmd.Parameters.AddWithValue("@SatisFiyati", System.Math.Round(satisFiyati, 2));
+
+        cmd.ExecuteNonQuery();
+        cmd.Connection.Close();
+    }
+
+    public static void DiptenTepkiBatchKapat(long batchId, double toplamKar, string neden)
+    {
+        var conn = OpenConnection();
+
+        System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
+        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+        cmd.Connection = conn;
+        cmd.CommandText = "[dbo].[upd_diptenTepkiBatchKapat]";
+        cmd.Parameters.AddWithValue("@BatchId", batchId);
+        cmd.Parameters.AddWithValue("@ToplamKar", System.Math.Round(toplamKar, 2));
+        cmd.Parameters.AddWithValue("@KapanisNedeni", neden);
+
+        cmd.ExecuteNonQuery();
+        cmd.Connection.Close();
+    }
+
+    public static bool DiptenTepkiBugunBatchVarMi()
+    {
+        bool var = false;
+
+        using (System.Data.SqlClient.SqlConnection connection = new System.Data.SqlClient.SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            System.Data.SqlClient.SqlCommand cmd = connection.CreateCommand();
+            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+            cmd.CommandText = "[dbo].[sel_diptenTepkiBugunBatchVar]";
+
+            object result = cmd.ExecuteScalar();
+            if (result != null && result != System.DBNull.Value)
+            {
+                var = true;
+            }
+        }
+
+        return var;
+    }
+
     static T MapFromDataReader<T>(System.Data.SqlClient.SqlDataReader reader) where T : new()
     {
         T instance = new T();
@@ -1062,6 +1356,56 @@ public class DatabaseManager
         return instance;
     }
 
+    // === PORTFOY SENKRON ===
 
+    public static void IdealPortfoyTemizle()
+    {
+        var conn = OpenConnection();
+        System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
+        cmd.Connection = conn;
+        cmd.CommandText = "DELETE FROM IdealPortfoy";
+        cmd.ExecuteNonQuery();
+        cmd.Connection.Close();
+    }
+
+    public static void IdealPortfoyEkle(string sembol, int lot, double maliyet, double guncelFiyat, double karZarar)
+    {
+        var conn = OpenConnection();
+        System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
+        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+        cmd.Connection = conn;
+        cmd.CommandText = "[dbo].[ins_idealPortfoy]";
+        cmd.Parameters.AddWithValue("@Sembol", sembol);
+        cmd.Parameters.AddWithValue("@Lot", lot);
+        cmd.Parameters.AddWithValue("@Maliyet", maliyet);
+        cmd.Parameters.AddWithValue("@GuncelFiyat", guncelFiyat);
+        cmd.Parameters.AddWithValue("@KarZarar", karZarar);
+        cmd.ExecuteNonQuery();
+        cmd.Connection.Close();
+    }
+
+    public static void IdealHesapGuncelle(double bakiye, double islemLimit)
+    {
+        var conn = OpenConnection();
+        System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
+        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+        cmd.Connection = conn;
+        cmd.CommandText = "[dbo].[upd_idealHesap]";
+        cmd.Parameters.AddWithValue("@Bakiye", bakiye);
+        cmd.Parameters.AddWithValue("@IslemLimit", islemLimit);
+        cmd.ExecuteNonQuery();
+        cmd.Connection.Close();
+    }
+
+    public static void CoreSenkronGuncelle()
+    {
+        var conn = OpenConnection();
+        System.Data.SqlClient.SqlCommand cmd = conn.CreateCommand();
+        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+        cmd.Connection = conn;
+        cmd.CommandText = "[dbo].[upd_coreSenkron]";
+        cmd.ExecuteNonQuery();
+        cmd.Connection.Close();
+    }
 
 }

@@ -65,6 +65,13 @@ namespace StockPortfolioReports.Pages
             return Page();
         }
 
+        public async Task<IActionResult> OnGetFiyatAsync(string hisse)
+        {
+            var h = await _context.Hisse.FirstOrDefaultAsync(x => x.HisseAdi == hisse);
+            if (h == null) return new JsonResult(new { fiyat = 0 });
+            return new JsonResult(new { fiyat = h.PiyasaSatis ?? 0 });
+        }
+
         public async Task<IActionResult> OnPostIptalAsync(long id)
         {
             await _context.Database.ExecuteSqlRawAsync(

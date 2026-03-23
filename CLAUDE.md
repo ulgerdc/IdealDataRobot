@@ -792,6 +792,36 @@ Satis yapildiktan sonra ayni/yakin fiyattan tekrar alim yapilmasi sorunu duzelti
 
 C# kodu degismiyor — `DatabaseManager.HisseAlimKontrol()` ayni parametrelerle ayni SP'yi cagiriyor.
 
+### Faz 22: PortfoySenkron + CoreSenkron Mekanizmasi - TAMAMLANDI (2026-03-09)
+
+IdealPro'daki gercek pozisyonlari DB ile senkronize eden sistem.
+
+**PortfoySenkron** (`Denali/PortfoySenkron.cs`):
+- Her 5 dakikada bir calisir (dakika % 5 == 0)
+- `Sistem.BistHesapOku()` ile hesap bilgisi ve pozisyonlar okunur
+- Pozisyon field'lari: `Symbol`, `Lot`, `Cost`, `LastPrice`, `ProfitX`
+- IdealPortfoy tablosuna yazilir, ardindan `CoreSenkronGuncelle()` cagirilir
+
+**CoreSenkron** (`upd_coreSenkron` SP):
+- IdealPortfoy vs HisseHareket (RobotAdi<>'CoreSenkron') lot farklarini karsilastirir
+- Fark varsa: CoreSenkron pozisyonu olusturur/gunceller/kapatir (PozisyonTipi=1, RobotAdi='CoreSenkron')
+- Sadece Hisse tablosunda Aktif=1 olan hisseler icin calisir
+
+**CoreSenkron Butce Fix** (`core_senkron_butce_fix.sql`):
+- **Sorun:** CoreSenkron pozisyonlari `sel_hisseHareket` SP'de `AcikPozisyonAlimTutari`'na dahil oluyordu
+- KBORU: 11,476 lot CoreSenkron = ~217K → butce %97.2 (gercekte %10.3)
+- **Cozum:** `sel_hisseHareket` ve `sel_hisseAlimKontrol` SP'lerinde `RobotAdi <> 'CoreSenkron'` filtresi eklendi
+- CoreSenkron pozisyonlari butce/risk hesaplamalarini etkilemiyor, sadece portfoy raporlamasinda gorunuyor
+
+**Degisen dosyalar:**
+| Dosya | Degisiklik |
+|-------|-----------|
+| `Denali/PortfoySenkron.cs` | Yeniden yazildi — hesap + pozisyon sync + CoreSenkron |
+| `Denali/DatabaseManager.cs` | +CoreSenkronGuncelle() metodu |
+| `core_senkron_butce_fix.sql` | sel_hisseHareket + sel_hisseAlimKontrol CoreSenkron haric |
+
+**Veritabaninda calistirildi:** Basarili
+
 ### Bekleyen Isler / Sonraki Adimlar
 
 1. ~~PINE SCRIPT: Pragmatik hibrit yaklasim~~ — TAMAMLANDI

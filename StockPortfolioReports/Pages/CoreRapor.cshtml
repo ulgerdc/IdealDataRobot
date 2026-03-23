@@ -25,7 +25,7 @@
 
 <!-- Ozet Kartlari -->
 <div class="row mb-4">
-    <div class="col-md-2">
+    <div class="col">
         <div class="card bg-dark text-white">
             <div class="card-body">
                 <h6 class="card-title">Aktif Core</h6>
@@ -33,31 +33,15 @@
             </div>
         </div>
     </div>
-    <div class="col-md-2">
-        <div class="card bg-primary text-white">
+    <div class="col">
+        <div class="card bg-secondary text-white">
             <div class="card-body">
-                <h6 class="card-title">Brut Maliyet</h6>
+                <h6 class="card-title">Maliyet</h6>
                 <h4>@Model.ToplamBrutMaliyet.ToString("N0") TL</h4>
             </div>
         </div>
     </div>
-    <div class="col-md-2">
-        <div class="card text-white @(Model.ToplamGerceklesenKar >= 0 ? "bg-success" : "bg-danger")">
-            <div class="card-body">
-                <h6 class="card-title">Gerceklesen Kar</h6>
-                <h4>@Model.ToplamGerceklesenKar.ToString("N0") TL</h4>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card bg-info text-white">
-            <div class="card-body">
-                <h6 class="card-title">Net Maliyet</h6>
-                <h4>@Model.ToplamNetMaliyet.ToString("N0") TL</h4>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2">
+    <div class="col">
         <div class="card bg-secondary text-white">
             <div class="card-body">
                 <h6 class="card-title">Guncel Deger</h6>
@@ -65,15 +49,27 @@
             </div>
         </div>
     </div>
-    <div class="col-md-2">
+    <div class="col">
+        <div class="card text-white @(Model.ToplamAcikKZ >= 0 ? "bg-success" : "bg-danger")">
+            <div class="card-body">
+                <h6 class="card-title">Acik K/Z</h6>
+                <h4>@Model.ToplamAcikKZ.ToString("N0") TL</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card text-white @(Model.ToplamGerceklesenKar >= 0 ? "bg-success" : "bg-danger")">
+            <div class="card-body">
+                <h6 class="card-title">Gerceklesen Kar</h6>
+                <h4>@Model.ToplamGerceklesenKar.ToString("N0") TL</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col">
         <div class="card text-white @(Model.ToplamKZ >= 0 ? "bg-success" : "bg-danger")">
             <div class="card-body">
                 <h6 class="card-title">Toplam K/Z</h6>
-                <h4>@Model.ToplamKZ.ToString("N2") TL</h4>
-                @if (Model.ToplamNetMaliyet > 0)
-                {
-                    <small>%@((Model.ToplamKZ / Model.ToplamNetMaliyet * 100).ToString("N2"))</small>
-                }
+                <h4>@Model.ToplamKZ.ToString("N0") TL</h4>
             </div>
         </div>
     </div>
@@ -93,12 +89,11 @@
                     <th class="text-end">Lot</th>
                     <th class="text-end">Ort Maliyet</th>
                     <th class="text-end">Guncel Fiyat</th>
-                    <th class="text-end">Brut Maliyet</th>
-                    <th class="text-end">Gerceklesen</th>
-                    <th class="text-end">Net Maliyet</th>
+                    <th class="text-end">Maliyet</th>
                     <th class="text-end">Guncel Deger</th>
-                    <th class="text-end">K/Z</th>
-                    <th class="text-end">K/Z %</th>
+                    <th class="text-end">Acik K/Z</th>
+                    <th class="text-end">Gerceklesen</th>
+                    <th class="text-end">Toplam K/Z</th>
                     <th class="text-end">Ort Gun</th>
                     <th class="text-end">Kapanan</th>
                 </tr>
@@ -113,16 +108,15 @@
                         <td class="text-end">@h.OrtMaliyet.ToString("N2")</td>
                         <td class="text-end">@h.GuncelFiyat.ToString("N2")</td>
                         <td class="text-end">@h.BrutMaliyet.ToString("N0")</td>
+                        <td class="text-end">@h.GuncelDeger.ToString("N0")</td>
+                        <td class="text-end @(h.AcikKZ >= 0 ? "text-success" : "text-danger")">
+                            @h.AcikKZ.ToString("N0")
+                        </td>
                         <td class="text-end @(h.GerceklesenKar >= 0 ? "text-success" : "text-danger")">
                             @h.GerceklesenKar.ToString("N0")
                         </td>
-                        <td class="text-end text-info"><strong>@h.NetMaliyet.ToString("N0")</strong></td>
-                        <td class="text-end">@h.GuncelDeger.ToString("N0")</td>
-                        <td class="text-end @(h.AktifKZ >= 0 ? "text-success" : "text-danger")">
-                            <strong>@h.AktifKZ.ToString("N2")</strong>
-                        </td>
-                        <td class="text-end @(h.AktifKZYuzde >= 0 ? "text-success" : "text-danger")">
-                            %@h.AktifKZYuzde.ToString("N2")
+                        <td class="text-end @(h.ToplamKZ >= 0 ? "text-success" : "text-danger")">
+                            <strong>@h.ToplamKZ.ToString("N0")</strong>
                         </td>
                         <td class="text-end">@h.OrtTutmaGun</td>
                         <td class="text-end">@h.KapananAdet</td>
@@ -139,19 +133,15 @@
                         <td class="text-end">-</td>
                         <td class="text-end">-</td>
                         <td class="text-end">@Model.ToplamBrutMaliyet.ToString("N0")</td>
+                        <td class="text-end">@Model.ToplamGuncelDeger.ToString("N0")</td>
+                        <td class="text-end @(Model.ToplamAcikKZ >= 0 ? "text-success" : "text-danger")">
+                            @Model.ToplamAcikKZ.ToString("N0")
+                        </td>
                         <td class="text-end @(Model.ToplamGerceklesenKar >= 0 ? "text-success" : "text-danger")">
                             @Model.ToplamGerceklesenKar.ToString("N0")
                         </td>
-                        <td class="text-end text-info"><strong>@Model.ToplamNetMaliyet.ToString("N0")</strong></td>
-                        <td class="text-end">@Model.ToplamGuncelDeger.ToString("N0")</td>
                         <td class="text-end @(Model.ToplamKZ >= 0 ? "text-success" : "text-danger")">
-                            <strong>@Model.ToplamKZ.ToString("N2")</strong>
-                        </td>
-                        <td class="text-end @(Model.ToplamKZ >= 0 ? "text-success" : "text-danger")">
-                            @if (Model.ToplamNetMaliyet > 0)
-                            {
-                                <text>%@((Model.ToplamKZ / Model.ToplamNetMaliyet * 100).ToString("N2"))</text>
-                            }
+                            <strong>@Model.ToplamKZ.ToString("N0")</strong>
                         </td>
                         <td class="text-end">-</td>
                         <td class="text-end">@Model.HisseDetaylari.Sum(h => h.KapananAdet)</td>
@@ -167,7 +157,7 @@
 </div>
 
 <!-- Bar Chart -->
-@if (Model.HisseDetaylari.Any(h => h.AktifLot > 0))
+@if (Model.HisseDetaylari.Any())
 {
     <div class="card mb-4">
         <div class="card-header"><strong>Core K/Z Dagilimi</strong></div>
@@ -188,10 +178,10 @@
                     datasets: [
                         {
                             label: 'Acik K/Z',
-                            data: chartData.kzData,
-                            backgroundColor: chartData.kzData.map(v => v >= 0
+                            data: chartData.acikKZData,
+                            backgroundColor: chartData.acikKZData.map(v => v >= 0
                                 ? 'rgba(40, 167, 69, 0.7)' : 'rgba(220, 53, 69, 0.7)'),
-                            borderColor: chartData.kzData.map(v => v >= 0
+                            borderColor: chartData.acikKZData.map(v => v >= 0
                                 ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)'),
                             borderWidth: 1
                         },
